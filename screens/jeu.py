@@ -3,7 +3,8 @@ import math
 from core.player import Player
 from core.saves import load_save
 import os
-
+# from multiplayer.serveur import *
+# from multiplayer.client import *
 def boucle_jeu(ecran, horloge, FPS):
 
     LARGEUR_ECRAN, HAUTEUR_ECRAN = ecran.get_size()
@@ -21,12 +22,13 @@ def boucle_jeu(ecran, horloge, FPS):
     TAILLE_ICONE = 64
 
     player = Player()
+    online = {}
     # Dictionnaire des bâtiments placés
     # clé : (x_case, y_case)
     # valeur : index du bâtiment
     batiments = {}
     if os.path.exists("save/save.json"):
-        if not load_save(batiments, player):
+        if not load_save(batiments, player, online):
             print("ERREUR CRITIQUE: Lecture du fichier save/save.json")
             return False
     batiment_selectionne = None
@@ -169,13 +171,16 @@ def boucle_jeu(ecran, horloge, FPS):
                     case = souris_vers_case((sx, sy))
                     if case not in batiments:
                         batiments[case] = batiment_selectionne
+                        IP = IP_server
+                        send_dict(batiments, IP)
 
                 # Déplacement du joueur
                 if not clic_barre and not batiment_selectionne is not None and sy < HAUTEUR_ECRAN - HAUTEUR_BARRE:
                     case = souris_vers_case((sx, sy))
-                    player.a_star(case, list(batiments), TAILLE_CASE)
+                    if not player.a_star(case, list(batiments), TAILLE_CASE):
+                        print("TA GEULE")
                     print(player.path)
-
+            batiments = recieved_client(IP)
 
         player.update(TAILLE_CASE)
 
