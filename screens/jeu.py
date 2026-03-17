@@ -80,6 +80,7 @@ def boucle_jeu(ecran, horloge, FPS):
                     1
                 )
 
+
     # Boucle principale du jeu
     en_cours = True
     online_status = False
@@ -138,7 +139,17 @@ def boucle_jeu(ecran, horloge, FPS):
 
             # Clic droit : désélection
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
-                batiment_selectionne = None
+                sx, sy = pygame.mouse.get_pos()
+                case = souris_vers_case((sx, sy))
+                remove = None
+                for k in batiments.keys():
+                    if case == k:
+                        remove = k
+                print(remove)
+                if remove is not None:
+                    batiments.pop(remove)
+                else:
+                    batiment_selectionne = None
 
             # Clic gauche
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -152,11 +163,21 @@ def boucle_jeu(ecran, horloge, FPS):
                         clic_barre = True
                         break
 
+
                 # Placement du bâtiment sur la grille
                 if not clic_barre and batiment_selectionne is not None and sy < HAUTEUR_ECRAN - HAUTEUR_BARRE:
                     case = souris_vers_case((sx, sy))
                     if case not in batiments:
                         batiments[case] = batiment_selectionne
+
+                # Déplacement du joueur
+                if not clic_barre and not batiment_selectionne is not None and sy < HAUTEUR_ECRAN - HAUTEUR_BARRE:
+                    case = souris_vers_case((sx, sy))
+                    player.a_star(case, list(batiments), TAILLE_CASE)
+                    print(player.path)
+
+
+        player.update(TAILLE_CASE)
 
         # rendu
         ecran.fill((0, 0, 0))
@@ -175,6 +196,9 @@ def boucle_jeu(ecran, horloge, FPS):
             x = x_case * TAILLE_CASE - camera_x
             y = y_case * TAILLE_CASE - camera_y
             surface_monde.blit(images_batiments[idx], (x, y))
+
+        # Dessin du joueur
+        player.draw_player(surface_monde, camera_x, camera_y)
 
         # Application du zoom
         surface_affichee = pygame.transform.smoothscale(
