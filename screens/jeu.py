@@ -7,6 +7,7 @@ from core.Class.player import Player
 from core.Class.batiments import Batiment
 from core.saves import load_save
 from screens.GUI.menu_amelioration import afficher_menu_amelioration
+from screens.GUI.currency import afficher_currency
 
 
 def boucle_jeu(ecran, horloge, FPS):
@@ -85,8 +86,14 @@ def boucle_jeu(ecran, horloge, FPS):
             for x in range(debut_x, debut_x + int(largeur_vue) + TAILLE_CASE, TAILLE_CASE):
                 surface.blit(herbe, (x - camera_x, y - camera_y))
 
-    en_cours = True
+    police_currency = pygame.font.SysFont(None, 40)
+    image_currency = pygame.image.load("assets/Currency.png").convert_alpha()
+    scale_factor = 3
+    largeur = int(image_currency.get_width() * scale_factor)
+    hauteur = int(image_currency.get_height() * scale_factor)
+    image_currency = pygame.transform.scale(image_currency, (largeur, hauteur))
 
+    en_cours = True
     while en_cours:
         horloge.tick(FPS)
 
@@ -240,6 +247,8 @@ def boucle_jeu(ecran, horloge, FPS):
                 images_batiments[type_actuel][1], (TAILLE_ICONE, TAILLE_ICONE)
             )
             ecran.blit(icone, rect)
+
+        afficher_currency(ecran, player, image_currency, police_currency)
 
         pygame.display.flip()
 

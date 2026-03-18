@@ -20,7 +20,7 @@ def afficher_menu_amelioration(ecran, batiment, clic_x):
 
     # chargement image menu
     image_fond = pygame.image.load("assets/buttons/upgrade_menu.png").convert_alpha()
-    image_fond = pygame.transform.smoothscale(image_fond, (400, 250))
+    image_fond = pygame.transform.scale(image_fond, (400, 250))
 
 
     btn_fermer = BoutonImage(
