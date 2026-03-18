@@ -2,8 +2,8 @@ import pygame
 import sys
 from core.Class.batiments import Batiment
 from core.Class.buttons import BoutonImage
-
-
+import screens.jeu
+import core.sounds as sound
 def afficher_menu_amelioration(ecran, batiment, clic_x):
     en_menu = True
     horloge = pygame.time.Clock()
@@ -70,6 +70,7 @@ def afficher_menu_amelioration(ecran, batiment, clic_x):
 
                 if btn_ameliorer and btn_ameliorer.clic():
                     batiment.upgrade()
+                    sound.son_upgrade.play()
                     en_menu = False
 
         # Affichage boutons

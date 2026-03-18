@@ -8,6 +8,7 @@ from screens.jeu import boucle_jeu
 
 if __name__ == "__main__":
     pygame.init()
+
     LARGEUR_ECRAN, HAUTEUR_ECRAN = 1280, 720
     ecran = pygame.display.set_mode((LARGEUR_ECRAN, HAUTEUR_ECRAN))
     pygame.display.set_caption("Mon Jeu")

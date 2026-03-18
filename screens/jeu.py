@@ -7,11 +7,13 @@ from core.Class.player import Player
 from core.Class.batiments import Batiment
 from core.saves import load_save
 from screens.GUI.menu_amelioration import afficher_menu_amelioration
+import core.sounds as sound
 
 
 def boucle_jeu(ecran, horloge, FPS):
     LARGEUR_ECRAN, HAUTEUR_ECRAN = ecran.get_size()
     HAUTEUR_BARRE = 100
+
 
     herbe = pygame.image.load("assets/grass.png").convert()
     TAILLE_CASE = herbe.get_width()
@@ -169,6 +171,7 @@ def boucle_jeu(ecran, horloge, FPS):
 
                         if not collision(batiments, nouveau):
                             batiments.append(nouveau)
+                            sound.son_placement.play()
                             # Optionnel: on peut forcer batiment_selectionne = None ici pour devoir recliquer sur l'icône à chaque fois
 
                     # CAS B : On n'a RIEN en main -> On tente d'INTERAGIR (Améliorer)
