@@ -1,12 +1,50 @@
 import pygame
 import math
+import threading
+
+from pygame.display import update
+
 from core.player import Player
 from core.saves import load_save
 import os
-# from multiplayer.serveur import *
-# from multiplayer.client import *
-def boucle_jeu(ecran, horloge, FPS):
+from multiplayer.serveur import *
+from multiplayer.client import send_dict_tuple_client, CLIENT, recieved_client
+import time
 
+batiments = {}
+
+def update_batiments(client_sock):
+    global batiments
+    while True:
+        res = recieved_client(client_sock)
+        if res is None:
+            continue
+        data, msg_type = res
+        print(msg_type)
+        if msg_type == 'dict':
+            lol = False
+            print(">>> Donnée reçue (batiments) :", data)
+            if data == {}:
+                batiments = {}
+            else:
+                for k in data.keys():
+                    if type(k) == type((0, 0)) and type(data[k]) == type(0):
+                        lol = True
+                    else:
+                        lol = False
+                if lol:
+                    batiments = {}
+                    for k, v in data.items():
+                        batiments[k] = int(v)
+        time.sleep(0.05)
+
+
+
+thread_lance = False
+
+def boucle_jeu(ecran, horloge, FPS):
+    global batiments
+    global thread_lance
     LARGEUR_ECRAN, HAUTEUR_ECRAN = ecran.get_size()
     HAUTEUR_BARRE = 100  # barre du bas
 
@@ -26,9 +64,8 @@ def boucle_jeu(ecran, horloge, FPS):
     # Dictionnaire des bâtiments placés
     # clé : (x_case, y_case)
     # valeur : index du bâtiment
-    batiments = {}
     if os.path.exists("save/save.json"):
-        if not load_save(batiments, player, online):
+        if not load_save(batiments, player):
             print("ERREUR CRITIQUE: Lecture du fichier save/save.json")
             return False
     batiment_selectionne = None
@@ -83,11 +120,16 @@ def boucle_jeu(ecran, horloge, FPS):
                 )
 
 
+
     # Boucle principale du jeu
     en_cours = True
     online_status = False
     while en_cours:
         horloge.tick(FPS)
+        if CLIENT is not None and not thread_lance:
+            print("THREAD TRIGGER")
+            thread_lance = True
+            threading.Thread(target=update_batiments, args=(CLIENT,), daemon=True).start()
 
         for event in pygame.event.get():
 
@@ -98,15 +140,15 @@ def boucle_jeu(ecran, horloge, FPS):
             # Menu pause
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 from screens.pause import menu_pause
-                if online_status:
+                if False:
                     etat_pause = menu_pause(ecran, horloge, FPS, batiments, None, player)
                     pass
                 else:
                     etat_pause = menu_pause(ecran, horloge, FPS, batiments, None, player)
-                if etat_pause is False:
+                if not etat_pause:
                     return False
                 elif etat_pause == "menu":
-                    return "menu"
+                    return True
 
             # Zoom souris
             if event.type == pygame.MOUSEWHEEL:
@@ -140,16 +182,17 @@ def boucle_jeu(ecran, horloge, FPS):
                 derniere_souris = (sx, sy)
 
             # Clic droit : désélection
+            remove = None
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
                 sx, sy = pygame.mouse.get_pos()
                 case = souris_vers_case((sx, sy))
-                remove = None
                 for k in batiments.keys():
                     if case == k:
                         remove = k
                 print(remove)
                 if remove is not None:
                     batiments.pop(remove)
+                    send_dict_tuple_client(batiments, CLIENT)
                 else:
                     batiment_selectionne = None
 
@@ -171,16 +214,16 @@ def boucle_jeu(ecran, horloge, FPS):
                     case = souris_vers_case((sx, sy))
                     if case not in batiments:
                         batiments[case] = batiment_selectionne
-                        IP = IP_server
-                        send_dict(batiments, IP)
+                        if CLIENT is not None:
+                            print(f"envoi en cours {batiments}")
+                            send_dict_tuple_client(batiments, CLIENT)
 
                 # Déplacement du joueur
                 if not clic_barre and not batiment_selectionne is not None and sy < HAUTEUR_ECRAN - HAUTEUR_BARRE:
                     case = souris_vers_case((sx, sy))
-                    if not player.a_star(case, list(batiments), TAILLE_CASE):
+                    if not case in batiments.keys() and not player.a_star(case, list(batiments), TAILLE_CASE):
                         print("TA GEULE")
                     print(player.path)
-            batiments = recieved_client(IP)
 
         player.update(TAILLE_CASE)
 

@@ -3,6 +3,7 @@ import json
 import os
 from multiplayer.client import connection
 from multiplayer.serveur import server_running
+import threading
 class Bouton:
     def __init__(self, texte, x, y, largeur, hauteur):
         self.rect = pygame.Rect(x, y, largeur, hauteur)
@@ -54,19 +55,20 @@ def menu_principal(ecran, horloge, FPS):
                         elif etat_confirmation == "menu":
                             return etat_confirmation, True
                         elif etat_confirmation == "jeu":
-                            server_running()
+                            threading.Thread(target=server_running, args=()).start()
                             return etat_confirmation, True
                     else:
-                        server_running()
+                        threading.Thread(target=server_running, args=()).start()
+                        threading.Thread(target=connection, args=()).start()
                         return "jeu", True
                 if boutons[1].clic():
                     if os.path.exists("save/save.json"):
-                        server_running()
+                        threading.Thread(target=server_running, args=()).start()
+                        threading.Thread(target=connection, args=()).start()
                         return "jeu", True
                 if boutons[2].clic():  # Rejoindre
-                    connect = connection()
-                    if connect == -1:
-                        print("[SERVER] Erreur de connexion")
+                    threading.Thread(target=connection, args=()).start()
+                    return "jeu", True
 
                 if boutons[3].clic():  # Paramètres
                     print("Ouvrir menu paramètres")

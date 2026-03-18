@@ -24,6 +24,6 @@ if __name__ == "__main__":
             etat, en_cours = menu_principal(ecran, horloge, FPS)
         elif etat == "jeu":
             en_cours = boucle_jeu(ecran, horloge, FPS)
-            etat = "menu"  # revenir au menu après jeu
+            etat = "menu"  # revenir au menu après jeu*
 
     pygame.quit()
