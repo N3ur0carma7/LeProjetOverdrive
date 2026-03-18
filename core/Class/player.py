@@ -3,8 +3,6 @@ import random
 import pygame
 import heapq
 
-from discord.ext.commands.parameters import empty
-
 
 class Player:
     def __init__(self):
@@ -21,7 +19,7 @@ class Player:
         self.pos = (0, 0)
         self.path = []
 
-        self.speed = 10
+        self.speed = 15
         self.size = 40
     def hurt(self, raw_damage: int) -> float | None:
         """
@@ -53,7 +51,7 @@ class Player:
         chemin.reverse()
         return chemin
 
-    def a_star(self, dest: tuple, batiments: list, taille_case: int):
+    def a_star(self, dest: tuple, taille_case: int):
         """
         :param dest: coordonnées de destination
         :param batiments: liste de coordonnées des batiments sur la carte
@@ -91,8 +89,8 @@ class Player:
             ]
 
             for voisin in voisins:
-                if voisin in batiments:
-                    continue
+                #if voisin in batiments:
+                    #continue
 
                 if voisin in closed_set:
                     continue
@@ -149,3 +147,36 @@ class Player:
 
         pygame.draw.circle(surface, (220, 50, 50), (int(x), int(y)), self.size)
         return True
+
+    def to_dict(self):
+        return {
+            "hp_max": self.hp_max,
+            "hp": self.hp,
+            "crit_chance": self.crit_chance,
+            "crit_damage" : self.crit_damage,
+            "raw_damage" : self.raw_damage,
+            "defense" : self.defense,
+            "health_regen" : self.health_regen,
+            "money": self.money,
+            "pos": self.pos,
+            "path": self.path,
+            "speed": self.speed,
+            "size": self.size
+        }
+
+    @classmethod
+    def from_dict(cls, d):
+        obj = cls(d["hp_max"], d["hp"], d["crit_chance"], d["crit_damage"], d["raw_damage"], d["defense"], d["health_regen"], d["money"], d["pos"], d["path"], d["speed"], d["size"])
+        obj.hp_max = d.get("hp_max", 100)
+        obj.hp = d.get("hp", 100)
+        obj.crit_chance = d.get("crit_chance", 20)
+        obj.crit_damage = d.get("crit_damage", 10)
+        obj.raw_damage = d.get("raw_damage", 1)
+        obj.defense = d.get("defense", 0)
+        obj.health_regen = d.get("health_regen", 1)
+        obj.money = d.get("money", 0)
+        obj.pos = d.get("pos", (0, 0))
+        obj.path = d.get("path", [])
+        obj.speed = d.get("speed", 10)
+        obj.size = d.get("size", 40)
+        return obj

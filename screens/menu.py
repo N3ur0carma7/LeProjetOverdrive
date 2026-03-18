@@ -3,28 +3,10 @@ import json
 import os
 from multiplayer.client import connection
 from multiplayer.serveur import server_running
+from core.Class.buttons import Bouton
 import threading
-class Bouton:
-    def __init__(self, texte, x, y, largeur, hauteur):
-        self.rect = pygame.Rect(x, y, largeur, hauteur)
-        self.texte = texte
-        self.couleur_base = (100, 100, 100)
-        self.couleur_hover = (200, 200, 80)
-        self.police = pygame.font.SysFont(None, 40)
+import time
 
-    def afficher(self, ecran):
-        souris = pygame.mouse.get_pos()
-        if self.rect.collidepoint(souris):
-            couleur = self.couleur_hover
-        else:
-            couleur = self.couleur_base
-        pygame.draw.rect(ecran, couleur, self.rect)
-        txt_surface = self.police.render(self.texte, True, (0, 0, 0))
-        txt_rect = txt_surface.get_rect(center=self.rect.center)
-        ecran.blit(txt_surface, txt_rect)
-
-    def clic(self):
-        return self.rect.collidepoint(pygame.mouse.get_pos())
 
 def menu_principal(ecran, horloge, FPS):
     LARGEUR_ECRAN, HAUTEUR_ECRAN = ecran.get_size()
@@ -55,16 +37,20 @@ def menu_principal(ecran, horloge, FPS):
                         elif etat_confirmation == "menu":
                             return etat_confirmation, True
                         elif etat_confirmation == "jeu":
+                            threading.Thread(target=connection, args=()).start()
+                            time.sleep(1)
                             threading.Thread(target=server_running, args=()).start()
                             return etat_confirmation, True
                     else:
-                        threading.Thread(target=server_running, args=()).start()
                         threading.Thread(target=connection, args=()).start()
+                        time.sleep(1)
+                        threading.Thread(target=server_running, args=()).start()
                         return "jeu", True
                 if boutons[1].clic():
                     if os.path.exists("save/save.json"):
-                        threading.Thread(target=server_running, args=()).start()
                         threading.Thread(target=connection, args=()).start()
+                        time.sleep(1)
+                        threading.Thread(target=server_running, args=()).start()
                         return "jeu", True
                 if boutons[2].clic():  # Rejoindre
                     threading.Thread(target=connection, args=()).start()

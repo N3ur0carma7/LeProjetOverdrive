@@ -17,7 +17,6 @@ if __name__ == "__main__":
     # état initial = menu
     en_cours = True
     etat = "menu"
-
     while en_cours:
         if etat == "menu":
             # retourne le prochain état selon le bouton cliqué

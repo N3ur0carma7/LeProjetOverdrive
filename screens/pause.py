@@ -2,7 +2,7 @@ import pygame
 
 from multiplayer.client import send_server, DISCONNECT_MESSAGE, CLIENT
 from screens.menu import Bouton
-from core.player import Player
+from core.Class.player import Player
 from core.saves import save_game
 def menu_pause(ecran, horloge, FPS, buildings, online_data, player: Player):
     LARGEUR_ECRAN, HAUTEUR_ECRAN = ecran.get_size()

@@ -2,11 +2,12 @@ import socket
 import time
 import json
 import ast
+from core.Class.batiments import *
+from core.Class.player import *
 HEADER = 64
 PORT = 5050
 FORMAT = "utf-8"
 DISCONNECT_MESSAGE = "[DISCONNECT]"
-IP_server = ""
 CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 recv_buffer = b""
@@ -132,6 +133,24 @@ def handle_message_client(msg, client):
             print(f"[FLOAT] server has send : {flot}")
             return flot, "float"
 
+        elif msg_type == "batiment":
+            b_dict = data["payload"]
+            bat = Batiment.from_dict(b_dict)
+            print(f"[BATIMENT] server has send : {bat.type} niv={bat.niveau} pos=({bat.x},{bat.y})")
+            return bat, "batiment"
+
+        elif msg_type == "liste_batiments":
+            liste_dicts = data["payload"]
+            bats = [Batiment.from_dict(d) for d in liste_dicts]
+            print(f"[LISTE BATIMENTS] reçue : {[str(b) for b in bats]}")
+            return bats, "liste_batiments"
+
+        elif msg_type == "liste_joueurs":
+            liste_dicts = data["payload"]
+            plays = [Player.from_dict(d) for d in liste_dicts]
+            print(f"[LISTE JOUEURS] reçue : {[str(b) for b in plays]}")
+            return plays, "liste_joueurs"
+
         else:
             print(f"[UNKNOWN JSON] server: {data}")
             return None, None
@@ -201,16 +220,29 @@ def send_dict_tuple_client(dict_tuple, client):
     data = json.dumps({"type": "dict", "payload": dic})
     send_server(data, client)
 
+
+def send_batiment_client(batiment, client):
+    payload = batiment.to_dict()
+    data = json.dumps({"type": "batiment", "payload": payload})
+    send_server(data, client)
+
+def send_liste_batiments_client(liste_batiments, client):
+    # transforme chaque Batiment en dict sérialisable
+    payload = [b.to_dict() for b in liste_batiments]
+    data = json.dumps({"type": "liste_batiments", "payload": payload})
+    send_server(data, client)
+
+def send_liste_joueurs_client(liste_joueurs, client):
+    payload = [j.to_dict() for j in liste_joueurs]
+    data = json.dumps({"type": "liste_joueurs", "payload": payload})
+    send_server(data, client)
+
+
 def connection():
-    global IP_server
     global CLIENT
     SERVER = search_serv()
     if SERVER == -1:
         print("[NOT FOUND] server not found")
-    IP_server = SERVER
     ADDR = (SERVER, PORT)
-    client = CLIENT
-    client.connect(ADDR)
-    CLIENT = client
-    send_dict_tuple_client({(1,2): "hello world"}, CLIENT)
+    CLIENT.connect(ADDR)
     print(f"[SERVER] {SERVER} connected")

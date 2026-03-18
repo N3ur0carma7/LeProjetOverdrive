@@ -3,7 +3,8 @@ import threading
 import json
 import time
 import ast
-
+from core.Class.batiments import *
+from core.Class.player import *
 FORMAT = "utf-8"
 HEADER = 64
 PORT = 5050
@@ -53,7 +54,7 @@ def str_to_tuple_key(dic):
 
 def handle_client(client, addr):
     print(f"[NEW CLIENT] {addr} connected\n")
-    clients[addr] = client
+
     send_dict_server({"server": "hello client"}, client)
     connected = True
     while connected:
@@ -69,7 +70,7 @@ def handle_client(client, addr):
             else :
                 message, type = handle_message_recieved(msg, addr)
                 for i in clients.keys():
-                    if i != addr:
+                    if  i != addr:
                         if type == "list":
                             send_list_server(message, clients[i])
                         elif type == "dict":
@@ -87,6 +88,18 @@ def handle_client(client, addr):
                             send_float_server(message, clients[i])
                         elif type == "tuple":
                             send_tuple_server(message, clients[i])
+                        elif type == "batiment":
+                            send_batiment_server(message.to_dict(), clients[i])
+                        elif type == "liste_batiments":
+                            # on renvoie la même liste sous forme de dicts
+                            payload = [b.to_dict() for b in message]  # message = liste de Batiment
+                            data = json.dumps({"type": "liste_batiments", "payload": payload})
+                            send_client(data, clients[i])
+                        elif type == "liste_joueurs":
+                            payload = [p.to_dict() for p in message]
+                            data = json.dumps({"type": "liste_joueurs", "payload": payload})
+                            send_client(data, clients[i])
+
 
 
         except Exception as e:
@@ -113,27 +126,46 @@ def handle_message_recieved (msg, addr):
         elif msg_type == "tuple":
             tup = data["payload"]
             print(f"[TUP] {addr} : {tup}")
-            return tup
+            return tup, msg_type
 
         elif msg_type == "str" :
             stri = data["payload"]
             print(f"[STR] {addr} : {stri}")
-            return stri
+            return stri, msg_type
 
         elif msg_type == "int" :
             ints = data["payload"]
             print(f"[INT] {addr} : {ints}")
-            return ints
+            return ints, msg_type
 
         elif msg_type == "bool" :
             bools = data["payload"]
             print(f"[BOOL] {addr} : {bools}")
-            return bools
+            return bools, msg_type
 
         elif msg_type == "float":
             flot = data["payload"]
             print(f"[FLOAT] {addr} : {flot}")
-            return flot
+            return flot, msg_type
+
+        elif msg_type == "batiment":
+            b_dict = data["payload"]
+            bat = Batiment.from_dict(b_dict)
+            print(f"[BATIMENT] {addr} : {bat.type} niv={bat.niveau} pos=({bat.x},{bat.y})")
+            return bat, msg_type
+
+        elif msg_type == "liste_batiments":
+            liste_dicts = data["payload"]  # liste de dicts
+            bats = [Batiment.from_dict(d) for d in liste_dicts]
+            print(f"[LISTE BATIMENTS] {addr} : {[str(b) for b in bats]}")
+            return bats, "liste_batiments"
+        
+        elif msg_type == "liste_joueurs":
+            liste_dicts = data["payload"]
+            plays = [Player.from_dict(d) for d in liste_dicts]
+            print(f"[LISTE JOUEURS] {addr} : {[str(b) for b in plays]}")
+            return plays, "liste_joueurs"
+
 
     except json.JSONDecodeError:
         print(f"[ERROR] {addr} : {msg}")
@@ -193,6 +225,11 @@ def send_tuple_server(tup, client):
     data = json.dumps({"type": "tuple", "payload": list(tup)})
     send_client(data, client)
 
+def send_batiment_server(batiment, client):
+    payload = batiment.to_dict()
+    data = json.dumps({"type": "batiment", "payload": payload})
+    send_client(data, client)
+
 def disconnect_server():
     global SERVER
     SERVER.close()
@@ -209,9 +246,9 @@ def start(server):
         thread = threading.Thread(target=handle_client, args=(client, addr))
         thread.daemon =True
         thread.start()
+        clients[addr] = client
         number_connected = len(clients)
         print(f"[ACTIVE CLIENTS] {number_connected}\n")
-
         if number_connected == 0:
             break
     disconnect_server()

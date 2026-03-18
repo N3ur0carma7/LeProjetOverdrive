@@ -1,41 +1,44 @@
 import pygame
 import math
-import threading
 
-from pygame.display import update
-
-from core.player import Player
+from core.Class.player import Player
 from core.saves import load_save
 import os
 from multiplayer.serveur import *
-from multiplayer.client import send_dict_tuple_client, CLIENT, recieved_client
+from multiplayer.client import send_list_client, CLIENT, recieved_client, send_batiment_client, send_liste_batiments_client, send_liste_joueurs_client
+from core.Class.batiments import *
+from screens.GUI.menu_amelioration import afficher_menu_amelioration
 import time
 
-batiments = {}
+batiments = []
+players = []
 
-def update_batiments(client_sock):
+
+def update(client_sock):
     global batiments
+    global players
     while True:
         res = recieved_client(client_sock)
         if res is None:
             continue
         data, msg_type = res
         print(msg_type)
-        if msg_type == 'dict':
-            lol = False
+        if msg_type == 'liste_batiments':
             print(">>> Donnée reçue (batiments) :", data)
-            if data == {}:
-                batiments = {}
+            if not data:
+                batiments = []
             else:
-                for k in data.keys():
-                    if type(k) == type((0, 0)) and type(data[k]) == type(0):
-                        lol = True
-                    else:
-                        lol = False
-                if lol:
-                    batiments = {}
-                    for k, v in data.items():
-                        batiments[k] = int(v)
+                batiments = []
+                for B in data:
+                    batiments.append(B)
+        elif msg_type == 'liste_joueurs':
+            print(">>> Donnée reçue (joueurs) :", data)
+            if not data:
+                players = []
+            else:
+                players = []
+                for P in data:
+                    players.append(P)
         time.sleep(0.05)
 
 
@@ -44,6 +47,7 @@ thread_lance = False
 
 def boucle_jeu(ecran, horloge, FPS):
     global batiments
+    global players
     global thread_lance
     LARGEUR_ECRAN, HAUTEUR_ECRAN = ecran.get_size()
     HAUTEUR_BARRE = 100  # barre du bas
@@ -52,14 +56,28 @@ def boucle_jeu(ecran, horloge, FPS):
     TAILLE_CASE = herbe.get_width()
 
     # Chargement des bâtiments
-    images_batiments = [
-        pygame.image.load("assets/building1.png").convert_alpha(),
-        pygame.image.load("assets/building2.png").convert_alpha()
+    images_batiments = {
+        Batiment.TYPE_RESIDENTIEL: {
+            1: pygame.image.load("assets/buildings/house_lvl1.png").convert_alpha(),
+            2: pygame.image.load("assets/buildings/house_lvl2.png").convert_alpha(),  # Image niveau 2
+            3: pygame.image.load("assets/buildings/house_lvl3.png").convert_alpha()  # Image niveau 3
+        },
+        Batiment.TYPE_MINE: {
+            1: pygame.image.load("assets/buildings/mine_lvl1.png").convert_alpha(),
+            2: pygame.image.load("assets/buildings/mine_lvl2.png").convert_alpha(),
+            3: pygame.image.load("assets/buildings/mine_lvl3.png").convert_alpha()
+        }
+    }
+
+    TYPES_BATIMENTS = [
+        Batiment.TYPE_RESIDENTIEL,
+        Batiment.TYPE_MINE
     ]
 
     TAILLE_ICONE = 64
 
     player = Player()
+    players.append(player)
     online = {}
     # Dictionnaire des bâtiments placés
     # clé : (x_case, y_case)
@@ -69,6 +87,17 @@ def boucle_jeu(ecran, horloge, FPS):
             print("ERREUR CRITIQUE: Lecture du fichier save/save.json")
             return False
     batiment_selectionne = None
+
+    def collision(batiments, nouveau):
+        for b in batiments:
+            if (
+                    nouveau.x < b.x + b.largeur and
+                    nouveau.x + nouveau.largeur > b.x and
+                    nouveau.y < b.y + b.hauteur and
+                    nouveau.y + nouveau.hauteur > b.y
+            ):
+                return True
+        return False
 
     # Caméra et zoom
     camera_x, camera_y = 0.0, 0.0
@@ -85,6 +114,7 @@ def boucle_jeu(ecran, horloge, FPS):
     # Création de la barre d’icônes
     rects_icones = []
     marge = 20
+
     for i in range(len(images_batiments)):
         rect = pygame.Rect(
             marge + i * (TAILLE_ICONE + marge),
@@ -94,7 +124,6 @@ def boucle_jeu(ecran, horloge, FPS):
         )
         rects_icones.append(rect)
 
-    # Convertit la position de la souris en coordonnées de case
     def souris_vers_case(pos):
         sx, sy = pos
         mx = camera_x + sx / zoom
@@ -114,7 +143,7 @@ def boucle_jeu(ecran, horloge, FPS):
                 surface.blit(herbe, (x - camera_x, y - camera_y))
                 pygame.draw.rect(
                     surface,
-                    (60, 60, 60),
+                    (60, 60, 60, 1),
                     (x - camera_x, y - camera_y, TAILLE_CASE, TAILLE_CASE),
                     1
                 )
@@ -126,10 +155,10 @@ def boucle_jeu(ecran, horloge, FPS):
     online_status = False
     while en_cours:
         horloge.tick(FPS)
+
         if CLIENT is not None and not thread_lance:
-            print("THREAD TRIGGER")
             thread_lance = True
-            threading.Thread(target=update_batiments, args=(CLIENT,), daemon=True).start()
+            threading.Thread(target=update, args=(CLIENT,), daemon=True).start()
 
         for event in pygame.event.get():
 
@@ -182,20 +211,24 @@ def boucle_jeu(ecran, horloge, FPS):
                 derniere_souris = (sx, sy)
 
             # Clic droit : désélection
-            remove = None
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
                 sx, sy = pygame.mouse.get_pos()
                 case = souris_vers_case((sx, sy))
-                for k in batiments.keys():
-                    if case == k:
-                        remove = k
-                print(remove)
-                if remove is not None:
-                    batiments.pop(remove)
-                    send_dict_tuple_client(batiments, CLIENT)
-                else:
-                    batiment_selectionne = None
-
+                if batiment_selectionne is not None:
+                    for B in batiments:
+                        if (
+                                B.x <= case[0] < B.x + B.largeur and
+                                B.y <= case[1] < B.y + B.hauteur
+                        ):
+                            batiments.remove(B)
+                            print(f"envoi en cours {batiments}")
+                            send_liste_batiments_client(batiments, CLIENT)
+                            break
+                if not batiment_selectionne is not None and sy < HAUTEUR_ECRAN - HAUTEUR_BARRE:
+                    case = souris_vers_case((sx, sy))
+                    if not player.a_star(case, TAILLE_CASE):
+                        print("TA GEULE")
+                    print(player.path)
             # Clic gauche
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 sx, sy = pygame.mouse.get_pos()
@@ -210,20 +243,37 @@ def boucle_jeu(ecran, horloge, FPS):
 
 
                 # Placement du bâtiment sur la grille
-                if not clic_barre and batiment_selectionne is not None and sy < HAUTEUR_ECRAN - HAUTEUR_BARRE:
-                    case = souris_vers_case((sx, sy))
-                    if case not in batiments:
-                        batiments[case] = batiment_selectionne
-                        if CLIENT is not None:
-                            print(f"envoi en cours {batiments}")
-                            send_dict_tuple_client(batiments, CLIENT)
+                if not clic_barre and sy < HAUTEUR_ECRAN - HAUTEUR_BARRE:
+                    mx = camera_x + sx / zoom
+                    my = camera_y + sy / zoom
 
-                # Déplacement du joueur
-                if not clic_barre and not batiment_selectionne is not None and sy < HAUTEUR_ECRAN - HAUTEUR_BARRE:
-                    case = souris_vers_case((sx, sy))
-                    if not case in batiments.keys() and not player.a_star(case, list(batiments), TAILLE_CASE):
-                        print("TA GEULE")
-                    print(player.path)
+                    if batiment_selectionne is not None:
+                        grid_x = int(mx // TAILLE_CASE)
+                        grid_y = int(my // TAILLE_CASE)
+
+                        type_batiment = TYPES_BATIMENTS[batiment_selectionne]
+                        nouveau = Batiment(type_batiment, grid_x, grid_y)
+
+                        if not collision(batiments, nouveau):
+                            batiments.append(nouveau)
+                            if CLIENT is not None:
+                                print(f"envoi en cours {batiments}")
+                                send_liste_batiments_client(batiments, CLIENT)
+
+                    else:
+                        for B in batiments:
+                            rect = B.get_rect_pixel(TAILLE_CASE)
+                            rect.x -= camera_x
+                            rect.y -= camera_y
+                            mx = camera_x + sx / zoom
+                            my = camera_y + sy / zoom
+
+                            rect = B.get_rect_pixel(TAILLE_CASE)
+
+                            if rect.collidepoint(mx, my):
+                                afficher_menu_amelioration(ecran, B, sx)
+                                break
+
 
         player.update(TAILLE_CASE)
 
@@ -239,11 +289,31 @@ def boucle_jeu(ecran, horloge, FPS):
 
         dessiner_grille(surface_monde)
 
-        # Dessin des bâtiments
-        for (x_case, y_case), idx in batiments.items():
-            x = x_case * TAILLE_CASE - camera_x
-            y = y_case * TAILLE_CASE - camera_y
-            surface_monde.blit(images_batiments[idx], (x, y))
+        for B in batiments:
+            image = images_batiments[B.type][B.niveau]
+            x = B.x * TAILLE_CASE - camera_x + (TAILLE_CASE - image.get_width()) // 2
+            y = B.y * TAILLE_CASE - camera_y + (TAILLE_CASE - image.get_height()) // 2
+            surface_monde.blit(image, (x, y))
+
+        if batiment_selectionne is not None:
+            sx, sy = pygame.mouse.get_pos()
+            case = souris_vers_case((sx, sy))
+            type_batiment = TYPES_BATIMENTS[batiment_selectionne]
+            test_batiment = Batiment(type_batiment, case[0], case[1])
+            # On prend l'image du niveau 1 par défaut pour le fantôme
+            image = images_batiments[type_batiment][1]
+            image_fantome = image.copy()
+            # collision = rouge
+            if collision(batiments, test_batiment):
+                image_fantome.fill((255, 0, 0, 120), special_flags=pygame.BLEND_RGBA_MULT)
+
+            x = case[0] * TAILLE_CASE - camera_x + (TAILLE_CASE - image.get_width()) // 2
+            y = case[1] * TAILLE_CASE - camera_y + (TAILLE_CASE - image.get_height()) // 2
+
+            surface_monde.blit(
+                image_fantome,
+                (x, y)
+            )
 
         # Dessin du joueur
         player.draw_player(surface_monde, camera_x, camera_y)
@@ -266,8 +336,11 @@ def boucle_jeu(ecran, horloge, FPS):
         for i, rect in enumerate(rects_icones):
             couleur = (200, 200, 80) if i == batiment_selectionne else (100, 100, 100)
             pygame.draw.rect(ecran, couleur, rect.inflate(8, 8))
+
+            type_actuel = TYPES_BATIMENTS[i]
+            # On affiche l'image de niveau 1 dans la barre d'icônes
             icone = pygame.transform.smoothscale(
-                images_batiments[i], (TAILLE_ICONE, TAILLE_ICONE)
+                images_batiments[type_actuel][1], (TAILLE_ICONE, TAILLE_ICONE)
             )
             ecran.blit(icone, rect)
 
