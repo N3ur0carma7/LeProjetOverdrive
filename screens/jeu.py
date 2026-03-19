@@ -300,7 +300,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool):
                             print("Chemin bloqué")
 
 
-            # Clic gauche
+# Clic gauche
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 sx, sy = pygame.mouse.get_pos()
 
@@ -350,7 +350,10 @@ def boucle_jeu(ecran, horloge, FPS, online: bool):
 
                                 if resultat == "supprimer":
                                     batiments.remove(B)
-                                    player.money += Batiment.DATA[B.type][1]["cout"]
+                                    cashback = 0
+                                    for k in range(B.niveau):
+                                        cashback += Batiment.DATA[B.type][1+k]["cout"]
+                                    player.money += cashback
                                     if CLIENT is not None and online:
                                         send_liste_batiments_client(batiments, CLIENT)
                                 elif resultat == "upgrade":
@@ -360,6 +363,8 @@ def boucle_jeu(ecran, horloge, FPS, online: bool):
                                 synchroniser_npcs()
 
                                 break
+                #Boutton SELL pour vendre les batiments quand c'est selectionné
+                mode_sell = False
 
 
         player.update(TAILLE_CASE)
@@ -380,7 +385,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool):
             x = B.x * TAILLE_CASE - camera_x + (TAILLE_CASE - image.get_width()) // 2
             y = B.y * TAILLE_CASE - camera_y + (TAILLE_CASE - image.get_height()) // 2
             surface_monde.blit(image, (x, y))
-
+#fantome
         if batiment_selectionne is not None:
             sx, sy = pygame.mouse.get_pos()
             case = souris_vers_case((sx, sy))

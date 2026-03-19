@@ -13,42 +13,34 @@ def afficher_menu_amelioration(ecran, batiment, clic_x, player):
 
     largeur_ecran = ecran.get_width()
 
-    if clic_x < largeur_ecran / 2:
-        menu_x = largeur_ecran - 450
-    else:
-        menu_x = 50
-    menu_y = 50
-
+    #placement du menu
+    menu_x = -50
+    menu_y = 270
+    offset_block = 40 #tkt c'est pour la science
 
     # chargement image menu
-    image_fond = pygame.image.load("assets/buttons/upgrade_menu.png").convert_alpha()
-    image_fond = pygame.transform.smoothscale(image_fond, (400, 260))
+    image_fond = pygame.image.load("assets/buttons/upgrade_menu_interface.png").convert_alpha()
+    image_fond = pygame.transform.scale_by(image_fond, 1 )
 
-    btn_supprimer = BoutonImage(
-        menu_x + 100, menu_y + 150, 220, 200,
-        "assets/buttons/delete_button.png", "assets/buttons/delete_button.png",
-        ""
-    )
-
+#tous les différents boutons
     btn_fermer = BoutonImage(
-        menu_x + 320, menu_y -14 , 90, 90,
+        menu_x + 400 + offset_block, menu_y +32+ offset_block , 90, 90,
         "assets/buttons/close_button.png", "assets/buttons/close_button.png",
         ""
     )
-
-    btn_ameliorer = None
+    btn_sell = BoutonImage(
+        menu_x + 270+ offset_block, menu_y + 180+ offset_block, 180, 85,
+        "assets/buttons/sell_button.png", "assets/buttons/sell_button.png",
+        ""
+    )
     if  batiment.est_max_level() or player.money <= batiment.get_upgrade_cost():
-        cout = batiment.get_upgrade_cost()
-
-
-        btn_ameliorer = BoutonImage(menu_x + 100, menu_y - 12, 200, 85,
+        btn_ameliorer = BoutonImage(menu_x + 70+ offset_block, menu_y + 180+ offset_block, 200, 85,
                                     "assets/buttons/upgrade_impossible_button.png",
                                     "assets/buttons/upgrade_impossible_button.png",
                                     f"")
-
     else:
         btn_ameliorer = BoutonImage(
-            menu_x + 93, menu_y - 14, 210, 90,
+            menu_x + 70+ offset_block, menu_y + 180+ offset_block, 210, 85,
             "assets/buttons/upgrade_available_button.png", "assets/buttons/upgrade_available_button.png",
             f""
         )
@@ -57,17 +49,35 @@ def afficher_menu_amelioration(ecran, batiment, clic_x, player):
         ecran.blit(image_fond, (menu_x, menu_y))
 
         # Textes d'information
-        titre = police.render(f"Bâtiment : {batiment.type.capitalize()}", True, (255, 215, 0))
-        niveau = police.render(f"Niveau : {batiment.niveau} / 3", True, (255, 255, 255))
+        police_stat = pygame.font.Font("assets/fonts/Minecraft.ttf", 25)
+
+        val_suivante = "MAX"
+        unite = "/min"
 
         if batiment.type == Batiment.TYPE_RESIDENTIEL:
-            stat = police.render(f"Population : {batiment.get_population()}", True, (150, 255, 150))
+            info = "Population"
+            val_actuelle = batiment.get_population()
+            unite = ""
+            if not batiment.est_max_level():
+                val_suivante = Batiment.DATA[batiment.type][batiment.niveau + 1]["population"]
         else:
-            stat = police.render(f"Production : {batiment.get_production()}", True, (150, 255, 150))
+            info = "Production"
+            val_actuelle = batiment.get_production()
+            if not batiment.est_max_level():
+                val_suivante = Batiment.DATA[batiment.type][batiment.niveau + 1]["production"]
 
-        ecran.blit(titre, (menu_x + 50, menu_y + 60))
-        ecran.blit(niveau, (menu_x + 50, menu_y + 110))
-        ecran.blit(stat, (menu_x + 50, menu_y + 160))
+        stat_info = police_stat.render(info, True, (0, 0, 0))
+        number = police_stat.render(f"{val_actuelle}{unite}", True, (0, 0, 0))
+
+        couleur_next = (0, 0, 0) if not batiment.est_max_level() else (0, 0, 0)
+        new_number = police_stat.render(f"{val_suivante}{unite}", True, couleur_next)
+
+    #affichage c'est TRES TRES sale mais vs inquietez pas c'est temporaire
+        ecran.blit(stat_info, (menu_x + 60+ offset_block+ offset_block, menu_y + 70+ offset_block+ offset_block))
+        ecran.blit(number, (menu_x + 75+ offset_block+ offset_block, menu_y + 100+ offset_block+ offset_block))
+    #valeur du niveau d'après
+        ecran.blit(stat_info, (menu_x + 265+ offset_block+ offset_block, menu_y + 70+ offset_block+ offset_block))
+        ecran.blit(new_number, (menu_x + 280+ offset_block+ offset_block, menu_y + 100+ offset_block+ offset_block))
 
         # Clics
         for event in pygame.event.get():
@@ -90,12 +100,12 @@ def afficher_menu_amelioration(ecran, batiment, clic_x, player):
 
 
                     en_menu = False
-                if btn_ameliorer and btn_supprimer.clic():
+                if btn_ameliorer and btn_sell.clic():
                     return "supprimer"
 
         # Affichage boutons
         btn_fermer.afficher(ecran)
-        btn_supprimer.afficher(ecran)
+        btn_sell.afficher(ecran)
         if btn_ameliorer:
             btn_ameliorer.afficher(ecran)
 
