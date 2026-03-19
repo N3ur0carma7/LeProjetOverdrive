@@ -362,6 +362,9 @@ def boucle_jeu(ecran, horloge, FPS):
                                     player.money += cout
                                     if CLIENT is not None:
                                         send_liste_batiments_client(batiments, CLIENT)
+                                elif resultat == "upgrade":
+                                    if CLIENT is not None:
+                                        send_liste_batiments_client(batiments, CLIENT)
 
                                 synchroniser_npcs()
 

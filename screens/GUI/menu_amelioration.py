@@ -86,6 +86,7 @@ def afficher_menu_amelioration(ecran, batiment, clic_x, player):
                             sound.son_upgrade.play()
                             player.money -= batiment.get_upgrade_cost()
                             batiment.upgrade()
+                            return "upgrade"
 
 
                     en_menu = False
