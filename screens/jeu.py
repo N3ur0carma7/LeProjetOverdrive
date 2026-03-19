@@ -126,8 +126,7 @@ def boucle_jeu(ecran, horloge, FPS):
             attendus = population_attendue.get(cle, 0)
 
             while len(actuels) < attendus:
-                npc = Npc(b)
-                npc.TAILLE_CASE = TAILLE_CASE
+                npc = Npc(b, TAILLE_CASE)
                 npcs.append(npc)
                 actuels.append(npc)
 
@@ -411,19 +410,21 @@ def boucle_jeu(ecran, horloge, FPS):
         # Dessin du joueur
         player.draw_player(surface_monde, camera_x, camera_y)
 
+        # PNJ : mise a jour + dessin sur surface_monde (meme pipeline que le joueur)
+        for npc in npcs:
+            npc.update()
+            nx = int(npc.monde_x - camera_x)
+            ny = int(npc.monde_y - camera_y)
+            sw, sh = surface_monde.get_size()
+            if -80 < nx < sw + 80 and -80 < ny < sh + 80:
+                npc.dessiner_monde(surface_monde, camera_x, camera_y, image_pnj)
+
         surface_affichee = pygame.transform.smoothscale(
             surface_monde,
             (dims[0], dims[1] - HAUTEUR_BARRE)
         )
 
         ecran.blit(surface_affichee, (0, 0))
-
-        # PNJ : mise a jour + dessin directement sur l'ecran (taille fixe, pas zoomee)
-        for npc in npcs:
-            npc.update()
-            ex, ey = npc.ecran_pos(camera_x, camera_y, zoom)
-            if -40 < ex < dims[0] + 40 and -40 < ey < dims[1] - HAUTEUR_BARRE + 40:
-                npc.dessiner(ecran, image_pnj, camera_x, camera_y, zoom)
 
         pygame.draw.rect(
             ecran,

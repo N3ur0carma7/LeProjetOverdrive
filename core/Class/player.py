@@ -140,10 +140,33 @@ class Player:
         :param camera_y: la position y de la caméra
         :return: True si le joueur s'est correctement déplacé, False sinon.
         """
-        x = self.pos[0] - camera_x
-        y = self.pos[1] - camera_y
+        x = int(self.pos[0] - camera_x)
+        y = int(self.pos[1] - camera_y)
+        s = self.size  # demi-taille de référence
 
-        pygame.draw.circle(surface, (220, 50, 50), (int(x), int(y)), self.size)
+        # Corps (rectangle principal)
+        corps_rect = pygame.Rect(x - s // 2, y - s, s, int(s * 1.2))
+        pygame.draw.rect(surface, (60, 120, 220), corps_rect, border_radius=4)
+
+        # Tête (cercle)
+        tete_r = s // 2
+        pygame.draw.circle(surface, (255, 210, 160), (x, y - s - tete_r + 2), tete_r)
+
+        # Yeux
+        oeil_r = max(2, tete_r // 4)
+        pygame.draw.circle(surface, (30, 30, 30), (x - tete_r // 3, y - s - tete_r + 1), oeil_r)
+        pygame.draw.circle(surface, (30, 30, 30), (x + tete_r // 3, y - s - tete_r + 1), oeil_r)
+
+        # Ceinture (ligne horizontale)
+        pygame.draw.line(surface, (180, 90, 20),
+                         (x - s // 2, y - s + int(s * 0.4)),
+                         (x + s // 2, y - s + int(s * 0.4)), max(2, s // 8))
+
+        # Ombre sous les pieds
+        pygame.draw.ellipse(surface, (20, 60, 20, 120),
+                            pygame.Rect(x - s // 2, y + 2, s, max(4, s // 5)))
+
+
         return True
 
     def to_dict(self):
