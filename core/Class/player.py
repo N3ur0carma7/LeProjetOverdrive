@@ -166,6 +166,7 @@ class Player:
         pygame.draw.ellipse(surface, (20, 60, 20, 120),
                             pygame.Rect(x - s // 2, y + 2, s, max(4, s // 5)))
 
+
         return True
 
     def to_dict(self):
