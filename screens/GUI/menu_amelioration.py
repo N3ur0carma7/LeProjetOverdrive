@@ -100,3 +100,4 @@ def afficher_menu_amelioration(ecran, batiment, clic_x, player):
 
         pygame.display.flip()
         horloge.tick(60)
+
