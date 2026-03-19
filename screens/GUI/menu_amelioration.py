@@ -44,7 +44,6 @@ def afficher_menu_amelioration(ecran, batiment, clic_x, player):
                                     "assets/buttons/upgrade_impossible_button.png",
                                     f"")
 
-
     else:
         btn_ameliorer = BoutonImage(
             menu_x + 93, menu_y - 14, 210, 90,
