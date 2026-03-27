@@ -2,20 +2,31 @@ import pygame
 import math
 import os
 from multiplayer.serveur import *
-from multiplayer.client import send_list_client, CLIENT, recieved_client, send_batiment_client, send_liste_batiments_client, send_liste_joueurs_client
+import multiplayer.client as client_module
+from multiplayer.client import send_list_client, receive_loop, send_batiment_client, send_liste_batiments_client, send_liste_joueurs_client, receive_callback
 from core.Class.batiments import *
 import time
 from multiplayer.client import send_liste_batiments_client
 
+stop_event = threading.Event()
 batiments = []
 players = []
+def on_message_recu(result):
+    global batiments_recus, joueurs_recus
+    message, type = result
+    if type == 'liste_batiments':
+        batiments_recus = message
+    elif type == 'liste_joueurs':
+        joueurs_recus = message
 
+client_module.receive_callback = on_message_recu
 
-def update(client_sock):
+def update(client_sock, stop):
     global batiments
     global players
-    while True:
-        res = recieved_client(client_sock)
+    while not stop.is_set():
+        client = receive_loop(client_sock)
+        res = client
         if res is None:
             continue
         data, msg_type = res
@@ -40,7 +51,6 @@ def update(client_sock):
 
 
 
-thread_lance = False
 
 from core.Class.player import Player
 from core.Class.batiments import Batiment
@@ -53,7 +63,7 @@ import core.sounds as sound
 def boucle_jeu(ecran, horloge, FPS, online: bool):
     global batiments
     global players
-    global thread_lance
+    global update_finished
     HAUTEUR_BARRE = 100
     LARGEUR_ECRAN, HAUTEUR_ECRAN = ecran.get_size()
     dims = [LARGEUR_ECRAN, HAUTEUR_ECRAN]  # mutable pour mise a jour au resize
@@ -234,13 +244,11 @@ def boucle_jeu(ecran, horloge, FPS, online: bool):
             player.money += gains
             production_acc -= gains
 
-        if CLIENT is not None and not thread_lance and online:
-            thread_lance = True
-            threading.Thread(target=update, args=(CLIENT,), daemon=True).start()
 
         for event in pygame.event.get():
 
             if event.type == pygame.QUIT:
+                stop_event.set()
                 return False
 
             if event.type == pygame.VIDEORESIZE:
@@ -255,8 +263,10 @@ def boucle_jeu(ecran, horloge, FPS, online: bool):
                 else:
                     etat_pause = menu_pause(ecran, horloge, FPS, batiments, online, player)
                 if not etat_pause:
+                    stop_event.set()
                     return False
                 elif etat_pause == "menu":
+                    stop_event.set()
                     return True
 
             if event.type == pygame.MOUSEWHEEL:
@@ -331,9 +341,9 @@ def boucle_jeu(ecran, horloge, FPS, online: bool):
                             batiments.append(nouveau)
                             sound.son_placement.play()
                             synchroniser_npcs()
-                            if CLIENT is not None and online:
+                            if client_module.CLIENT is not None and online:
                                 print(f"envoi en cours {batiments}")
-                                send_liste_batiments_client(batiments, CLIENT)
+                                send_liste_batiments_client(batiments, client_module.CLIENT)
 
                     else:
                         for B in batiments:
@@ -354,11 +364,11 @@ def boucle_jeu(ecran, horloge, FPS, online: bool):
                                     for k in range(B.niveau):
                                         cashback += Batiment.DATA[B.type][1+k]["cout"]
                                     player.money += cashback
-                                    if CLIENT is not None and online:
-                                        send_liste_batiments_client(batiments, CLIENT)
+                                    if client_module.CLIENT is not None and online:
+                                        send_liste_batiments_client(batiments, client_module.CLIENT)
                                 elif resultat == "upgrade":
-                                    if CLIENT is not None and online:
-                                        send_liste_batiments_client(batiments, CLIENT)
+                                    if client_module.CLIENT is not None and online:
+                                        send_liste_batiments_client(batiments, client_module.CLIENT)
 
                                 synchroniser_npcs()
 
@@ -457,5 +467,5 @@ def boucle_jeu(ecran, horloge, FPS, online: bool):
         ecran.blit(texte_argent, (tx, ty))
 
         pygame.display.flip()
-
+    stop_event.set()
     return True

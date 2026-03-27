@@ -1,14 +1,18 @@
 import socket
+import threading
 import time
 import json
 import ast
+
 from core.Class.batiments import *
 from core.Class.player import *
+
 HEADER = 64
 PORT = 5050
 FORMAT = "utf-8"
 DISCONNECT_MESSAGE = "[DISCONNECT]"
-CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+CLIENT = None
+
 
 recv_buffer = b""
 
@@ -55,7 +59,7 @@ def search_serv():
 
 def recv_full_message(sock):
     global recv_buffer
-    sock.settimeout(0.1)
+    sock.settimeout(0.5)
 
     try:
         try:
@@ -158,20 +162,48 @@ def handle_message_client(msg, client):
     except json.JSONDecodeError:
         return msg, "text"
 
-def recieved_client(client):
-    try:
-        msg = recv_full_message(client)
-        if msg is None:
-            return None
 
-        if msg == DISCONNECT_MESSAGE:
-            return None
 
-        return handle_message_client(msg, client)
+receive_callback = None
 
-    except Exception as e:
-        print("Erreur recv:", e)
-        return None
+
+
+def receive_loop(client):
+    global recv_buffer
+    while True:
+        try:
+            chunk = client.recv(4096)
+            if not chunk:
+                print("[DISCONNECTED] serveur déconnecté")
+                recv_buffer = b""
+                break
+            recv_buffer += chunk
+
+            while len(recv_buffer) >= HEADER:
+                header = recv_buffer[:HEADER].decode().strip()
+                try:
+                    msg_len = int(header)
+                except:
+                    recv_buffer = recv_buffer[1:]
+                    continue
+
+                if len(recv_buffer) < HEADER + msg_len:
+                    break
+
+                msg = recv_buffer[HEADER:HEADER + msg_len].decode()
+                recv_buffer = recv_buffer[HEADER + msg_len:]
+
+                if msg == DISCONNECT_MESSAGE:
+                    client.close()
+                    return
+
+                result = handle_message_client(msg, client)
+                if receive_callback and result[0] is not None:
+                    receive_callback(result)  # transmet le message au jeu
+
+        except OSError:
+            recv_buffer = b""
+            break
 
 
 def send_server (msg, client):
@@ -238,11 +270,45 @@ def send_liste_joueurs_client(liste_joueurs, client):
     send_server(data, client)
 
 
+def disconnect():
+    global CLIENT, recv_buffer
+    if CLIENT is not None:
+        try:
+            send_server(DISCONNECT_MESSAGE, CLIENT)
+            CLIENT.close()
+        except OSError:
+            pass
+        finally:
+            CLIENT = None
+            recv_buffer = b""
+thread_loop = None
+
 def connection():
-    global CLIENT
+    global CLIENT, recv_buffer, thread_loop
+    if CLIENT is not None:
+        try:
+            CLIENT.close()
+        except OSError:
+            pass
+        CLIENT = None
+        recv_buffer = b""
+    if thread_loop is not None and thread_loop.is_alive():
+        thread_loop.join(timeout=2)
+
+    CLIENT = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    CLIENT.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     SERVER = search_serv()
     if SERVER == -1:
         print("[NOT FOUND] server not found")
+        return None
     ADDR = (SERVER, PORT)
-    CLIENT.connect(ADDR)
-    print(f"[SERVER] {SERVER} connected")
+    try:
+        CLIENT.connect(ADDR)
+        print(f"[SERVER] {SERVER} connected")
+        thread_loop = threading.Thread(target=receive_loop, args=(CLIENT,), daemon=True)
+        thread_loop.start()
+    except OSError:
+        print(f"[ERROR] {SERVER} connection failed")
+        CLIENT = None
+
+

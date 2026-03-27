@@ -1,9 +1,14 @@
+
+
 import pygame
 
-from multiplayer.client import send_server, DISCONNECT_MESSAGE, CLIENT
+from multiplayer.client import send_server, DISCONNECT_MESSAGE, CLIENT, disconnect
 from screens.menu import Bouton
 from core.Class.player import Player
 from core.saves import save_game
+
+
+
 def menu_pause(ecran, horloge, FPS, buildings, online_data, player: Player):
     LARGEUR_ECRAN, HAUTEUR_ECRAN = ecran.get_size()
     en_pause = True
@@ -14,7 +19,6 @@ def menu_pause(ecran, horloge, FPS, buildings, online_data, player: Player):
         Bouton("Sauvegarder", LARGEUR_ECRAN//2 - 120, 400, 240, 50),
         Bouton("Quitter", LARGEUR_ECRAN//2 - 120, 500, 240, 50)
     ]
-
     while en_pause:
         horloge.tick(FPS)
         for event in pygame.event.get():
@@ -25,16 +29,16 @@ def menu_pause(ecran, horloge, FPS, buildings, online_data, player: Player):
                 return "jeu"
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if boutons[0].clic():
-                    if online_data:
-                        send_server(DISCONNECT_MESSAGE, CLIENT)
+                    if online_data and CLIENT is not None:
+                        disconnect()
                     return "menu"
                 if boutons[1].clic():
                     if not save_game(buildings, player, online_data):
                         print("ERREUR CRITIQUE: Écriture du fichier save/save.json")
                         return False
                 if boutons[2].clic():
-                    if online_data:
-                        send_server(DISCONNECT_MESSAGE, CLIENT)
+                    if online_data and CLIENT is not None:
+                        disconnect()
                     return False
 
         # fond semi-transparent

@@ -1,12 +1,18 @@
 import pygame
 import json
 import os
-from multiplayer.client import connection
-from multiplayer.serveur import server_running
+from multiplayer.client import connection, CLIENT
+from multiplayer.serveur import server_running, disconnect
 from core.Class.buttons import Bouton
 import threading
 import time
 
+def lancer_partie():
+    serv = threading.Thread(target=server_running, daemon=True)
+    serv.start()
+    time.sleep(1)
+    client = threading.Thread(target=connection, daemon=True)
+    client.start()
 
 def menu_principal(ecran, horloge, FPS):
     LARGEUR_ECRAN, HAUTEUR_ECRAN = ecran.get_size()
@@ -45,23 +51,17 @@ def menu_principal(ecran, horloge, FPS):
                         elif etat_confirmation == "menu":
                             return etat_confirmation, True
                         elif etat_confirmation == "jeu":
-                            threading.Thread(target=connection, args=()).start()
-                            time.sleep(1)
-                            threading.Thread(target=server_running, args=()).start()
+                            lancer_partie()
                             return etat_confirmation, True
                     else:
-                        threading.Thread(target=connection, args=()).start()
-                        time.sleep(1)
-                        threading.Thread(target=server_running, args=()).start()
+                        lancer_partie()
                         return "jeu", True
                 if boutons[1].clic():
                     if os.path.exists("save/save.json"):
-                        threading.Thread(target=connection, args=()).start()
-                        time.sleep(1)
-                        threading.Thread(target=server_running, args=()).start()
+                        lancer_partie()
                         return "jeu", True
                 if boutons[2].clic():  # Rejoindre
-                    threading.Thread(target=connection, args=()).start()
+                    threading.Thread(target=connection, daemon=True).start()
                     return "jeu", True
 
                 if boutons[3].clic():  # Paramètres
