@@ -3,8 +3,39 @@ import random
 import pygame
 import heapq
 
+# Coordonnées pixel de chaque sprite dans le spritesheet (row, col) -> (x, y, w, h)
+# Rangée 0 : face (bas), Rangée 1 : dos (haut), Rangée 2 : droite, Rangée 3 : gauche
+_COL_BOUNDS = [(18,71),(88,148),(155,221),(232,294),(306,363),(375,430)]
+_ROW_BOUNDS = [(32,109),(173,251),(305,388),(428,511)]
+
+def _build_sprite_rects():
+    rects = {}
+    for row_idx, (ry1, ry2) in enumerate(_ROW_BOUNDS):
+        rects[row_idx] = []
+        for col_idx, (cx1, cx2) in enumerate(_COL_BOUNDS):
+            rects[row_idx].append(pygame.Rect(cx1, ry1, cx2 - cx1, ry2 - ry1))
+    return rects
+
+# Direction → index de rangée dans le spritesheet
+_DIR_ROW = {
+    "down":  0,
+    "up":    1,
+    "right": 2,
+    "left":  3,
+}
+
 
 class Player:
+    # Spritesheet partagé entre toutes les instances (chargé une seule fois)
+    _spritesheet = None
+    _sprite_rects = None
+
+    @classmethod
+    def load_sprites(cls):
+        if cls._spritesheet is None:
+            cls._spritesheet = pygame.image.load("assets/player.png").convert_alpha()
+            cls._sprite_rects = _build_sprite_rects()
+
     def __init__(self):
         self.hp_max = 100
         self.hp = 100
@@ -17,8 +48,18 @@ class Player:
         self.pos = (0, 0)
         self.path = []
 
-        self.speed = 15
+        self.speed = 7
         self.size = 40
+
+        # Animation
+        self.direction = "down"   # dernière direction de déplacement
+        self.anim_frame = 0       # frame courante (0-5)
+        self.anim_timer = 0.0     # accumulateur en secondes
+        self.anim_fps = 8         # frames par seconde d'animation
+        self.is_moving = False
+
+        # Taille d'affichage du sprite (hauteur cible en pixels monde)
+        self.sprite_height = 72
     def hurt(self, raw_damage: int) -> float | None:
         """
         :param raw_damage: dégats du monstre attaquant le joueur
@@ -107,6 +148,7 @@ class Player:
 
     def update(self, taille_case: int):
         if not self.path:
+            self.is_moving = False
             return
 
         next_case = self.path[0]
@@ -119,54 +161,67 @@ class Player:
 
         distance = math.hypot(dx, dy)
 
+        # Déterminer la direction
+        if abs(dx) >= abs(dy):
+            self.direction = "right" if dx > 0 else "left"
+        else:
+            self.direction = "down" if dy > 0 else "up"
+
+        self.is_moving = True
+
         if distance < self.speed:
             self.pos = (target_x, target_y)
-
             self.path.pop(0)
-
+            if not self.path:
+                self.is_moving = False
+                self.anim_frame = 0
+                self.anim_timer = 0.0
+                self.direction = "down"
             return
 
         dx /= distance
         dy /= distance
-
-
         self.pos = (self.pos[0] + dx * self.speed, self.pos[1] + dy * self.speed)
 
+    def update_anim(self, dt: float):
+        """Avance le timer d'animation. Appeler une fois par frame avec dt en secondes."""
+        if self.is_moving:
+            self.anim_timer += dt
+            if self.anim_timer >= 1.0 / self.anim_fps:
+                self.anim_timer = 0.0
+                self.anim_frame = (self.anim_frame + 1) % len(_COL_BOUNDS)
+        else:
+            # Idle : frame 0
+            self.anim_frame = 0
+            self.anim_timer = 0.0
+            self.direction = "down"
 
     def draw_player(self, surface, camera_x, camera_y) -> bool:
         """
         :param surface: la map
         :param camera_x: la position x de la caméra
         :param camera_y: la position y de la caméra
-        :return: True si le joueur s'est correctement déplacé, False sinon.
+        :return: True si le joueur s'est correctement dessiné, False sinon.
         """
-        x = int(self.pos[0] - camera_x)
-        y = int(self.pos[1] - camera_y)
-        s = self.size  # demi-taille de référence
+        Player.load_sprites()
 
-        # Corps (rectangle principal)
-        corps_rect = pygame.Rect(x - s // 2, y - s, s, int(s * 1.2))
-        pygame.draw.rect(surface, (60, 120, 220), corps_rect, border_radius=4)
+        row = _DIR_ROW[self.direction]
+        src_rect = Player._sprite_rects[row][self.anim_frame]
 
-        # Tête (cercle)
-        tete_r = s // 2
-        pygame.draw.circle(surface, (255, 210, 160), (x, y - s - tete_r + 2), tete_r)
+        # Mise à l'échelle : on cible sprite_height pixels de hauteur
+        scale = self.sprite_height / src_rect.height
+        dst_w = int(src_rect.width * scale)
+        dst_h = self.sprite_height
 
-        # Yeux
-        oeil_r = max(2, tete_r // 4)
-        pygame.draw.circle(surface, (30, 30, 30), (x - tete_r // 3, y - s - tete_r + 1), oeil_r)
-        pygame.draw.circle(surface, (30, 30, 30), (x + tete_r // 3, y - s - tete_r + 1), oeil_r)
+        # Extraire la sous-surface et la redimensionner
+        sub = Player._spritesheet.subsurface(src_rect)
+        scaled = pygame.transform.scale(sub, (dst_w, dst_h))
 
-        # Ceinture (ligne horizontale)
-        pygame.draw.line(surface, (180, 90, 20),
-                         (x - s // 2, y - s + int(s * 0.4)),
-                         (x + s // 2, y - s + int(s * 0.4)), max(2, s // 8))
+        # Centrer sur la position du joueur, pieds à pos
+        draw_x = int(self.pos[0] - camera_x) - dst_w // 2
+        draw_y = int(self.pos[1] - camera_y) - dst_h
 
-        # Ombre sous les pieds
-        pygame.draw.ellipse(surface, (20, 60, 20, 120),
-                            pygame.Rect(x - s // 2, y + 2, s, max(4, s // 5)))
-
-
+        surface.blit(scaled, (draw_x, draw_y))
         return True
 
     def to_dict(self):

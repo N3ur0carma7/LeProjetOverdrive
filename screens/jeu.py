@@ -363,6 +363,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool):
 
 
         player.update(TAILLE_CASE)
+        player.update_anim(dt)
 
         ecran.fill((0, 0, 0))
 
