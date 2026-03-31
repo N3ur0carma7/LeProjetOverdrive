@@ -46,7 +46,6 @@ def boucle_jeu(ecran, horloge, FPS, online: bool):
     herbe = pygame.image.load("assets/grass.png").convert()
     TAILLE_CASE = herbe.get_width()
 
-    # Chargement des bâtiments
     images_batiments = {
         Batiment.TYPE_RESIDENTIEL: {
             1: pygame.image.load("assets/buildings/house_lvl1.png").convert_alpha(),
@@ -197,7 +196,6 @@ def boucle_jeu(ecran, horloge, FPS, online: bool):
 
         for y in range(debut_y, debut_y + int(hauteur_vue) + TAILLE_CASE, TAILLE_CASE):
             for x in range(debut_x, debut_x + int(largeur_vue) + TAILLE_CASE, TAILLE_CASE):
-                # 1. On dessine l'image de l'herbe
                 surface.blit(herbe, (x - camera_x, y - camera_y))
                 pygame.draw.rect(
                     surface,
@@ -206,7 +204,6 @@ def boucle_jeu(ecran, horloge, FPS, online: bool):
                     epaisseur
                 )
 
-                # 2. On dessine le contour de la case par-dessus
                 rect_case = (x - camera_x, y - camera_y, TAILLE_CASE, TAILLE_CASE)
                 pygame.draw.rect(surface, couleur_grille, rect_case, epaisseur)
 
@@ -387,10 +384,8 @@ def boucle_jeu(ecran, horloge, FPS, online: bool):
             case = souris_vers_case((sx, sy))
             type_batiment = TYPES_BATIMENTS[batiment_selectionne]
             test_batiment = Batiment(type_batiment, case[0], case[1])
-            # On prend l'image du niveau 1 par défaut pour le fantôme
             image = images_batiments[type_batiment][1]
             image_fantome = image.copy()
-            # collision = rouge, hors portée = orange
             if collision(batiments, test_batiment):
                 image_fantome.fill((255, 0, 0, 120), special_flags=pygame.BLEND_RGBA_MULT)
             elif not joueur_a_portee(case):
@@ -404,10 +399,8 @@ def boucle_jeu(ecran, horloge, FPS, online: bool):
                 (x, y)
             )
 
-        # Dessin du joueur
         player.draw_player(surface_monde, camera_x, camera_y)
 
-        # PNJ : mise a jour + dessin sur surface_monde (meme pipeline que le joueur)
         for npc in npcs:
             npc.update()
             nx = int(npc.monde_x - camera_x)
@@ -434,7 +427,6 @@ def boucle_jeu(ecran, horloge, FPS, online: bool):
             pygame.draw.rect(ecran, couleur, rect.inflate(8, 8))
 
             type_actuel = TYPES_BATIMENTS[i]
-            # On affiche l'image de niveau 1 dans la barre d'icônes
             icone = pygame.transform.smoothscale(
                 images_batiments[type_actuel][1], (TAILLE_ICONE, TAILLE_ICONE)
             )
@@ -446,8 +438,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool):
         hud_x = dims[0] - image_argent.get_width() - marge_hud
         hud_y = marge_hud
         ecran.blit(image_argent, (hud_x, hud_y))
-        # Centrer le texte sur la zone noire (apres l'icone carre a gauche)
-        icone_offset = image_argent.get_height()  # la piece est un carre = hauteur
+        icone_offset = image_argent.get_height()
         zone_noire_x = hud_x + icone_offset
         zone_noire_w = image_argent.get_width() - icone_offset
         tx = (zone_noire_x + (zone_noire_w - texte_argent.get_width()) // 2) -40
