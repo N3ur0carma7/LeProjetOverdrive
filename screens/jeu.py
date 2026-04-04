@@ -7,6 +7,7 @@ from multiplayer.client import send_list_client, receive_loop, send_batiment_cli
 from core.Class.batiments import *
 import time
 from multiplayer.client import send_liste_batiments_client
+import random
 
 stop_event = threading.Event()
 batiments = []
@@ -79,7 +80,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
     batiments = []
     npcs = []
 
-    # Set player spawn in the middle of a tile
+    # Spawn du joueur au milieu d'une case
     player.pos = (TAILLE_CASE / 2, TAILLE_CASE / 2)
 
     image_pnj = pygame.image.load("assets/pnj.png").convert_alpha()
@@ -262,9 +263,26 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
     acc_vapeur   = 0.0  # generateur → vapeur
     save_done_timer = 0.0
 
+    ambient_playlist = list(range(len(sound.ambient_musics)))
+    random.shuffle(ambient_playlist)
+    current_playlist_index = 0
+    ambient_delay_timer = 0.0
+
     while en_cours:
-        dt = horloge.tick(FPS) / 1000.0  # secondes ecoulees
+        dt = horloge.tick(FPS) / 1000.0
         save_done_timer = max(0, save_done_timer - dt)
+
+        if not pygame.mixer.music.get_busy():
+            if ambient_delay_timer > 0:
+                ambient_delay_timer -= dt
+            else:
+                index = ambient_playlist[current_playlist_index]
+                sound.play_ambient(index, loop=0)
+                current_playlist_index += 1
+                if current_playlist_index >= len(ambient_playlist):
+                    random.shuffle(ambient_playlist)
+                    current_playlist_index = 0
+                ambient_delay_timer = 3.0 
 
         # Production des batiments selon leur type de ressource
         # Si food == 0, seule la farm continue de produire
@@ -546,4 +564,5 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
 
         pygame.display.flip()
     stop_event.set()
+    sound.stop_ambient()
     return True
