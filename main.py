@@ -1,7 +1,4 @@
-#this is main file
-
-
-
+# Fichier principal du jeu
 import pygame
 from screens.menu import menu_principal
 from screens.jeu import boucle_jeu

@@ -3,12 +3,7 @@ from core.Class.player import Player
 from core.Class.batiments import Batiment
 
 def save_game(buildings: list, player: Player, online_data):
-    """
-    :param buildings: dictionnaire des coordonnées des builds accompagné de leur id respectif
-    :param player: objet de type Player : c'est le joueur
-    :param online_data: à déterminer
-    :return: True | False
-    """
+    # Sauvegarde la partie
     try:
         batiments_real = []
         for B in buildings:
@@ -40,11 +35,7 @@ def save_game(buildings: list, player: Player, online_data):
 
 
 def load_save(buildings: list, player: Player):
-    """
-    :param buildings: dictionnaire VIDE qui va contenir les batiments du fichier de sauvegarde
-    :param player: objet de classe Player : c'est le joueur qui doit être vide (en gros il viens d'être créé)
-    :return: True | False
-    """
+    # Charge la sauvegarde
     try:
         with open('save/save.json', 'r') as file:
             save_data = json.load(file)
@@ -63,7 +54,7 @@ def load_save(buildings: list, player: Player):
         # Loading buildings data
         for b in save_data["Builds"]:
             buildings.append(Batiment.from_dict(b))
-        # Loadign online data | TO DO
+        # Charger les données en ligne | À FAIRE
         return True
     except Exception:
         return False

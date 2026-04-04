@@ -5,7 +5,7 @@ STEPS = [
     "Bienvenue dans Overdrive ! Cette ville est a toi. Construit, developpe, et prospere.",
     "Utilise le clic GAUCHE pour placer des batiments depuis la barre du bas.",
     "Les batiments de PRODUCTION (mine, ferme, generateur) necessitent des villageois.",
-    "Reste a portee dans un carré de 2 cases pour placer ou interagir avec un batiment.",
+    "Reste a portee dans un carre de 2 cases pour placer ou interagir avec un batiment.",
     "Scroll molette pour zoomer. Clic molette pour deplacer la camera.",
     "Appuie sur ECHAP pour acceder au menu pause et sauvegarder ta partie.",
     "Tes villageois ont besoin d'une MAISON pour vivre. Commence par en construire une !",
@@ -110,18 +110,12 @@ def _draw_panel(surface, panel_rect, font_text, font_hint,
     surface.blit(step_surf, (px + pw - step_surf.get_width() - PANEL_PADDING,
                               py + ph - step_surf.get_height() - 12))
 
-    hint_space = font_hint.render("[ ESPACE ] skip", True, COL_HINT)
+    hint_space = font_hint.render("[ ENTREE ] skip", True, COL_HINT)
     surface.blit(hint_space, (px + PANEL_PADDING, py + ph - hint_space.get_height() - 12))
 
 
 def run_tutorial(ecran, horloge, FPS, draw_background_fn=None):
-
-    # :param ecran: surface principale pygame
-    # :param horloge: pygame.time.Clock
-    # :param FPS: frames par seconde
-    # :param draw_background_fn: fonction appelee chaque frame pour dessiner
-    #                             le fond de jeu (grille + joueur).
-    #                             Signature : draw_background_fn()
+    # Lance le tutoriel
 
     font_text, font_hint = _get_fonts()
 
@@ -140,10 +134,10 @@ def run_tutorial(ecran, horloge, FPS, draw_background_fn=None):
                 return False
 
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE:
+                if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
                     char_idx = len(current_text)
 
-                elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+                elif event.key == pygame.K_SPACE:
                     if char_idx < len(current_text):
                         char_idx = len(current_text)
                     else:

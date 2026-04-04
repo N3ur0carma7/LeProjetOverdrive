@@ -30,13 +30,10 @@ class BoutonImage:
     # On ajoute largeur et hauteur dans les paramètres
     def __init__(self, x, y, largeur, hauteur, chemin_image_base, chemin_image_hover, texte=""):
 
-        # 1. Chargement brut des images
+        # Chargement et redimensionnement des images
         img_base_brute = pygame.image.load(chemin_image_base).convert_alpha()
         img_hover_brute = pygame.image.load(chemin_image_hover).convert_alpha()
 
-        # 2. Redimensionnement à la taille voulue
-        # Note : On utilise .scale() pour le pixel art pour garder les pixels nets.
-        # Si vos images ne sont pas en pixel art, utilisez pygame.transform.smoothscale()
         self.image_base = pygame.transform.scale(img_base_brute, (largeur, hauteur))
         self.image_hover = pygame.transform.scale(img_hover_brute, (largeur, hauteur))
 

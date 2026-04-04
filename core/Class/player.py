@@ -62,10 +62,7 @@ class Player:
 
         self.sprite_height = 72
     def hurt(self, raw_damage: int) -> float | None:
-        """
-        :param raw_damage: dégats du monstre attaquant le joueur
-        :return: nombre de dégats pris par le joueur ou None si le joueur est mort
-        """
+        # Inflige des dégâts au joueur
         damage = raw_damage / (self.defense * 0.05 + 1)
         self.hp -= damage
         if self.hp <= 0:
@@ -74,11 +71,7 @@ class Player:
             return damage
 
     def heuristique(self, start: tuple, dest: tuple):
-        """
-        :param start: coodonnées de départ
-        :param dest: coordonnées de destination
-        :return: Entier représentant la distance Manhattan du départ jusqu'à la destination
-        """
+        # Calcule la distance heuristique
         return abs(start[0] - dest[0]) + abs(start[1] - dest[1])
 
     def reconstruire_path(self, came_from, current):
@@ -92,11 +85,7 @@ class Player:
         return chemin
 
     def a_star(self, dest: tuple, taille_case: int):
-        """
-        :param dest: coordonnées de destination
-        :param batiments: liste de coordonnées des batiments sur la carte
-        :return: True si il existe un chemin allant de la position du joueur à la destination, False sinon
-        """
+        # Calcule le chemin avec A*
         start = (
             int(self.pos[0] // taille_case),
             int(self.pos[1] // taille_case)
@@ -182,7 +171,6 @@ class Player:
         self.pos = (self.pos[0] + dx * self.speed, self.pos[1] + dy * self.speed)
 
     def update_anim(self, dt: float):
-        """Avance le timer d'animation. Appeler une fois par frame avec dt en secondes."""
         if self.is_moving:
             self.anim_timer += dt
             if self.anim_timer >= 1.0 / self.anim_fps:
@@ -195,12 +183,7 @@ class Player:
             self.direction = "down"
 
     def draw_player(self, surface, camera_x, camera_y) -> bool:
-        """
-        :param surface: la map
-        :param camera_x: la position x de la caméra
-        :param camera_y: la position y de la caméra
-        :return: True si le joueur s'est correctement dessiné, False sinon.
-        """
+        # Dessine le joueur sur la surface
         Player.load_sprites()
 
         row = _DIR_ROW[self.direction]

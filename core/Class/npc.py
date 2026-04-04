@@ -4,13 +4,7 @@ import pygame
 
 
 class Npc:
-    """Villageois avec cycle maison → errance → travail → retour.
-
-    Toutes les coordonnées internes (monde_x, monde_y, cible, chemin)
-    sont en PIXELS MONDE, comme le joueur.
-    Les bâtiments stockent x/y en cases → on multiplie par taille_case
-    pour obtenir des pixels.
-    """
+    # Classe pour les villageois avec cycle de vie
 
     ETAT_ERRANCE      = "errance"
     ETAT_VERS_TRAVAIL = "vers_travail"
