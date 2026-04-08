@@ -187,7 +187,7 @@ def run_tutorial(ecran, horloge, FPS, draw_background_fn=None):
             tick = pygame.time.get_ticks()
             if (tick // 500) % 2 == 0:
                 if step_idx < len(STEPS) - 1:
-                    label = "[ ENTREE ] pour continuer"
+                    label = "[ ESPACE ] pour continuer"
                 else:
                     label = "[ ENTREE ] pour jouer !"
                 surf = font_hint.render(label, True, COL_BORDER2)
