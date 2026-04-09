@@ -46,15 +46,14 @@ from screens.GUI.menu_amelioration import afficher_menu_amelioration
 import core.sounds as sound
 from screens.tutorial import run_tutorial
 from screens.terminal import Terminal
-
+#patch pour la farm et autres
 def corriger_transparence(surface):
-    """Corrige les pixels semi-transparents en les rendant complètement transparents"""
     width, height = surface.get_size()
     for x in range(width):
         for y in range(height):
             color = surface.get_at((x, y))
-            if color.a < 20:  # Seuil d'alpha faible
-                surface.set_at((x, y), (0, 0, 0, 0))  # Complètement transparent
+            if color.a < 20:
+                surface.set_at((x, y), (0, 0, 0, 0))
     return surface
 
 def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
