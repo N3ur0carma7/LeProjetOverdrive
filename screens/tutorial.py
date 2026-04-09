@@ -47,8 +47,6 @@ def _get_fonts():
     if font_text is None:
         font_text = pygame.font.SysFont(None, 17)
 
-    # Police secondaire (hints / numeros d'etape) : Minecraft est OK ici car
-    # ces chaines ne contiennent que des caracteres ASCII.
     try:
         font_hint = pygame.font.Font(font_path, 12)
     except Exception:
@@ -115,8 +113,6 @@ def _draw_panel(surface, panel_rect, font_text, font_hint,
 
 
 def run_tutorial(ecran, horloge, FPS, draw_background_fn=None):
-    # Lance le tutoriel
-
     font_text, font_hint = _get_fonts()
 
     step_idx = 0
@@ -162,7 +158,6 @@ def run_tutorial(ecran, horloge, FPS, draw_background_fn=None):
                 char_idx += 1
                 acc_time -= CHAR_DELAY
 
-        # 1. Fond de jeu (grille + joueur visibles)
         if draw_background_fn is not None:
             draw_background_fn()
         else:
@@ -170,11 +165,8 @@ def run_tutorial(ecran, horloge, FPS, draw_background_fn=None):
 
         W, H = ecran.get_size()
 
-        # 2. Panneau centre horizontalement, positionne a ~65 % de la hauteur
-        #    (sous le centre, pour ne pas masquer le joueur qui est au milieu)
         px = W // 2 - PANEL_W // 2
         py = H // 2 - PANEL_H // 2 + H // 6
-        # Clamp pour rester dans l'ecran
         py = min(py, H - PANEL_H - 10)
         panel_rect = (px, py, PANEL_W, PANEL_H)
 
@@ -182,7 +174,6 @@ def run_tutorial(ecran, horloge, FPS, draw_background_fn=None):
         _draw_panel(ecran, panel_rect, font_text, font_hint,
                     visible, step_idx, len(STEPS))
 
-        # 3. Indicateur "ENTREE pour continuer" clignotant quand texte complet
         if char_idx >= len(current_text):
             tick = pygame.time.get_ticks()
             if (tick // 500) % 2 == 0:

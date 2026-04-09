@@ -6,8 +6,33 @@ import multiplayer.client as client_module
 from multiplayer.client import send_list_client, receive_loop, send_batiment_client, send_liste_batiments_client, send_liste_joueurs_client, receive_callback
 from core.Class.batiments import *
 import time
-from multiplayer.client import send_liste_batiments_client
 import random
+
+stop_event = threading.Event()
+batiments = []
+players = []
+def on_message_recu(result):
+    global batiments_recus, joueurs_recus
+    message, type = result
+    if type == 'liste_batiments':
+        batiments_recus = message
+    elif type == 'liste_joueurs':
+        joueurs_recus = message
+
+client_module.receive_callback = on_message_recu
+
+
+from core.Class.player import Player
+from core.Class.batiments import Batiment
+from core.Class.npc import Npc
+from core.saves import load_save
+from screens.GUI.menu_amelioration import afficher_menu_amelioration
+import core.sounds as sound
+from screens.tutorial import run_tutorial
+from screens.terminal import Terminal
+from screens.utils import collision, calculer_rects_icones, souris_vers_case, joueur_a_portee, dessiner_grille, dessiner_grille_overlay
+from screens.game_logic import synchroniser_npcs, calculer_production
+from screens.render import dessiner_monde, dessiner_hud
 
 stop_event = threading.Event()
 batiments = []
@@ -91,49 +116,15 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
     hud_vapeur_img = pygame.image.load("assets/vapeur.png").convert_alpha()
     save_done_img = pygame.image.load("assets/save_done.png").convert_alpha()
 
-    def synchroniser_npcs():
-        population_attendue = {}
-        for b in batiments:
-            if b.type == Batiment.TYPE_RESIDENTIEL:
-                population_attendue[id(b)] = b.get_population()
-
-        npcs_par_maison = {}
-        for npc in list(npcs):
-            cle = id(npc.maison)
-            if cle not in npcs_par_maison:
-                npcs_par_maison[cle] = []
-            npcs_par_maison[cle].append(npc)
-
-        maisons_valides = {id(b) for b in batiments if b.type == Batiment.TYPE_RESIDENTIEL}
-        for npc in list(npcs):
-            if id(npc.maison) not in maisons_valides:
-                npcs.remove(npc)
-
-        for b in batiments:
-            if b.type != Batiment.TYPE_RESIDENTIEL:
-                continue
-            cle = id(b)
-            actuels = npcs_par_maison.get(cle, [])
-            attendus = population_attendue.get(cle, 0)
-
-            while len(actuels) < attendus:
-                npc = Npc(b, TAILLE_CASE, player)
-                npcs.append(npc)
-                actuels.append(npc)
-
-            while len(actuels) > attendus:
-                npc = actuels.pop()
-                if npc in npcs:
-                    npcs.remove(npc)
-
-        lieux_travail = [b for b in batiments if b.type != Batiment.TYPE_RESIDENTIEL]
-        for i, npc in enumerate(npcs):
-            if lieux_travail:
-                npc.assigner_travail(lieux_travail[i % len(lieux_travail)])
-            else:
-                npc.assigner_travail(None)
-
     players.append(player)
+    # Dictionnaire des bâtiments placés
+    # clé : (x_case, y_case)
+    # valeur : index du bâtiment
+    is_new_game = not os.path.exists("save/save.json")
+    if not dev_mode and os.path.exists("save/save.json"):
+        if not load_save(batiments, player):
+            print("ERREUR CRITIQUE: Lecture du fichier save/save.json")
+            return False
     # Dictionnaire des bâtiments placés
     # clé : (x_case, y_case)
     # valeur : index du bâtiment
@@ -148,7 +139,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
         player.food = 5000
         player.vapeur = 5000
 
-    synchroniser_npcs()
+    synchroniser_npcs(batiments, npcs, player, TAILLE_CASE)
 
     # Camera et zoom
     camera_x = player.pos[0] - dims[0] / 2
@@ -189,18 +180,6 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
 
     terminal = Terminal()
 
-    def collision(batiments, nouveau):
-        for b in batiments:
-            if (
-                    nouveau.x < b.x + b.largeur and
-                    nouveau.x + nouveau.largeur > b.x and
-                    nouveau.y < b.y + b.hauteur and
-                    nouveau.y + nouveau.hauteur > b.y
-            ):
-                return True
-        return False
-
-
     ZOOM_MIN = 0.3
     ZOOM_MAX = 2.5
     VITESSE_ZOOM = 0.1
@@ -208,66 +187,21 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
     deplacement_camera = False
     derniere_souris = (0, 0)
 
-    def calculer_rects_icones():
-        rects = []
-        marge = 20
-        for i in range(len(images_batiments)):
-            rect = pygame.Rect(
-                marge + i * (TAILLE_ICONE + marge),
-                dims[1] - HAUTEUR_BARRE + (HAUTEUR_BARRE - TAILLE_ICONE) // 2,
-                TAILLE_ICONE,
-                TAILLE_ICONE
-            )
-            rects.append(rect)
-        return rects
-
-    rects_icones = calculer_rects_icones()
-    def souris_vers_case(pos):
-        sx, sy = pos
-        mx = camera_x + sx / zoom
-        my = camera_y + sy / zoom
-        return int(mx // TAILLE_CASE), int(my // TAILLE_CASE)
-
-    def joueur_a_portee(case, distance_max=2):
-        joueur_case_x = int(player.pos[0] // TAILLE_CASE)
-        joueur_case_y = int(player.pos[1] // TAILLE_CASE)
-        dx = abs(joueur_case_x - case[0])
-        dy = abs(joueur_case_y - case[1])
-        return dx <= distance_max and dy <= distance_max
-
-    def dessiner_grille(surface):
-        lw, lh = dims[0], dims[1]
-        largeur_vue = lw / zoom
-        hauteur_vue = (lh - HAUTEUR_BARRE) / zoom
-
-        debut_x = int(camera_x // TAILLE_CASE) * TAILLE_CASE
-        debut_y = int(camera_y // TAILLE_CASE) * TAILLE_CASE
-
-        for y in range(debut_y, debut_y + int(hauteur_vue) + TAILLE_CASE, TAILLE_CASE):
-            for x in range(debut_x, debut_x + int(largeur_vue) + TAILLE_CASE, TAILLE_CASE):
-                surface.blit(herbe, (x - camera_x, y - camera_y))
-
-    def dessiner_grille_overlay(surface):
-        couleur_grille = (20, 80, 20)
-        epaisseur = 1 if zoom < 1.0 else 2
-
-        debut_x = int(camera_x // TAILLE_CASE) * TAILLE_CASE
-        debut_y = int(camera_y // TAILLE_CASE) * TAILLE_CASE
-        largeur_vue = dims[0] / zoom
-        hauteur_vue = (dims[1] - HAUTEUR_BARRE) / zoom
-
-        x_fin = debut_x + int(largeur_vue) + TAILLE_CASE
-        y_fin = debut_y + int(hauteur_vue) + TAILLE_CASE
-
-        for x in range(debut_x, x_fin + 1, TAILLE_CASE):
-            screen_x = int((x - camera_x) * zoom)
-            pygame.draw.line(surface, couleur_grille, (screen_x, 0), (screen_x, dims[1] - HAUTEUR_BARRE), epaisseur)
-
-        for y in range(debut_y, y_fin + 1, TAILLE_CASE):
-            screen_y = int((y - camera_y) * zoom)
-            pygame.draw.line(surface, couleur_grille, (0, screen_y), (dims[0], screen_y), epaisseur)
-
+    rects_icones = calculer_rects_icones(dims, HAUTEUR_BARRE, TAILLE_ICONE)
     en_cours = True
+    acc_argent   = 0.0  # mine → money
+    acc_food     = 0.0  # farm → food
+    acc_vapeur   = 0.0  # generateur → vapeur
+    save_done_timer = 0.0
+
+    ambient_playlist = list(range(len(sound.ambient_musics)))
+    random.shuffle(ambient_playlist)
+    current_playlist_index = 0
+    ambient_delay_timer = 0.0
+
+    while en_cours:
+        dt = horloge.tick(FPS) / 1000.0
+        save_done_timer = max(0, save_done_timer - dt)
     acc_argent   = 0.0  # mine → money
     acc_food     = 0.0  # farm → food
     acc_vapeur   = 0.0  # generateur → vapeur
@@ -294,35 +228,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
                     current_playlist_index = 0
                 ambient_delay_timer = 3.0 
 
-        # Production des batiments selon leur type de ressource
-        # Si food == 0, seule la farm continue de produire
-        food_ok = player.food > 0
-        for b in batiments:
-            rtype = b.get_production_type()
-            val   = b.get_production() * dt / 60.0
-            if rtype == "nourriture":
-                acc_food   += val
-            elif not food_ok:
-                pass  # production stoppee tant que food == 0
-            elif rtype == "argent":
-                acc_argent += val
-            elif rtype == "vapeur":
-                acc_vapeur += val
-
-        gains_argent = int(acc_argent)
-        if gains_argent > 0:
-            player.money  += gains_argent
-            acc_argent    -= gains_argent
-
-        gains_food = int(acc_food)
-        if gains_food > 0:
-            player.food  += gains_food
-            acc_food     -= gains_food
-
-        gains_vapeur = int(acc_vapeur)
-        if gains_vapeur > 0:
-            player.vapeur += gains_vapeur
-            acc_vapeur    -= gains_vapeur
+        acc_argent, acc_food, acc_vapeur = calculer_production(batiments, player, dt, acc_argent, acc_food, acc_vapeur)
 
 
         for event in pygame.event.get():
@@ -333,7 +239,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
 
             if event.type == pygame.VIDEORESIZE:
                 dims[0], dims[1] = event.w, event.h
-                rects_icones[:] = calculer_rects_icones()
+                rects_icones[:] = calculer_rects_icones(dims, HAUTEUR_BARRE, TAILLE_ICONE)
 
             # ── Terminal : touche ² pour ouvrir/fermer ──────────────────────
             if event.type == pygame.KEYDOWN and event.unicode == "²":
@@ -396,7 +302,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
 
                 else:
                     sx, sy = pygame.mouse.get_pos()
-                    case = souris_vers_case((sx, sy))
+                    case = souris_vers_case((sx, sy), camera_x, camera_y, zoom, TAILLE_CASE)
 
                     if sy < HAUTEUR_ECRAN - HAUTEUR_BARRE:
                         if not player.a_star(case, TAILLE_CASE):
@@ -435,7 +341,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
                         nb_production = sum(1 for b in batiments if b.type != Batiment.TYPE_RESIDENTIEL)
                         production_pleine = (type_batiment != Batiment.TYPE_RESIDENTIEL and nb_production >= nb_villageois)
 
-                        if not joueur_a_portee((grid_x, grid_y)):
+                        if not joueur_a_portee((grid_x, grid_y), player, TAILLE_CASE):
                             print("Trop loin : rapprochez-vous de la case (2 cases max)")
                         elif production_pleine:
                             print("Pas assez de villageois pour ce batiment de production")
@@ -443,7 +349,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
                             player.money -= cout
                             batiments.append(nouveau)
                             sound.son_placement.play()
-                            synchroniser_npcs()
+                            synchroniser_npcs(batiments, npcs, player, TAILLE_CASE)
                             if client_module.CLIENT is not None and online:
                                 print(f"envoi en cours {batiments}")
                                 send_liste_batiments_client(batiments, client_module.CLIENT)
@@ -459,7 +365,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
                             rect = B.get_rect_pixel(TAILLE_CASE)
 
                             if rect.collidepoint(mx, my):
-                                if not joueur_a_portee((B.x, B.y)):
+                                if not joueur_a_portee((B.x, B.y), player, TAILLE_CASE):
                                     print("Trop loin : rapprochez-vous du bâtiment (2 cases max)")
                                     break
                                 resultat = afficher_menu_amelioration(ecran, B, sx, player)
@@ -476,7 +382,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
                                     if client_module.CLIENT is not None and online:
                                         send_liste_batiments_client(batiments, client_module.CLIENT)
 
-                                synchroniser_npcs()
+                                synchroniser_npcs(batiments, npcs, player, TAILLE_CASE)
 
                                 break
                 #Boutton SELL pour vendre les batiments quand c'est selectionné
@@ -495,43 +401,9 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
             (math.ceil(largeur_vue), math.ceil(hauteur_vue))
         ).convert()
 
-        dessiner_grille(surface_monde)
+        dessiner_grille(surface_monde, camera_x, camera_y, dims, HAUTEUR_BARRE, zoom, herbe, TAILLE_CASE)
 
-        for B in batiments:
-            image = images_batiments[B.type][B.niveau]
-            x = B.x * TAILLE_CASE - camera_x + (TAILLE_CASE - image.get_width()) // 2
-            y = B.y * TAILLE_CASE - camera_y + (TAILLE_CASE - image.get_height()) // 2
-            surface_monde.blit(image, (x, y))
-#fantome
-        if batiment_selectionne is not None:
-            sx, sy = pygame.mouse.get_pos()
-            case = souris_vers_case((sx, sy))
-            type_batiment = TYPES_BATIMENTS[batiment_selectionne]
-            test_batiment = Batiment(type_batiment, case[0], case[1])
-            image = images_batiments[type_batiment][1]
-            image_fantome = image.copy()
-            if collision(batiments, test_batiment):
-                image_fantome.fill((255, 0, 0, 120), special_flags=pygame.BLEND_RGBA_MULT)
-            elif not joueur_a_portee(case):
-                image_fantome.fill((255, 140, 0, 120), special_flags=pygame.BLEND_RGBA_MULT)
-
-            x = case[0] * TAILLE_CASE - camera_x + (TAILLE_CASE - image.get_width()) // 2
-            y = case[1] * TAILLE_CASE - camera_y + (TAILLE_CASE - image.get_height()) // 2
-
-            surface_monde.blit(
-                image_fantome,
-                (x, y)
-            )
-
-        player.draw_player(surface_monde, camera_x, camera_y)
-
-        for npc in npcs:
-            npc.update(dt)
-            nx = int(npc.monde_x - camera_x)
-            ny = int(npc.monde_y - camera_y)
-            sw, sh = surface_monde.get_size()
-            if -80 < nx < sw + 80 and -80 < ny < sh + 80:
-                npc.dessiner_monde(surface_monde, camera_x, camera_y, image_pnj)
+        dessiner_monde(surface_monde, batiments, images_batiments, camera_x, camera_y, TAILLE_CASE, batiment_selectionne, TYPES_BATIMENTS, player, npcs, image_pnj, dt)
 
         surface_affichee = pygame.transform.scale(
             surface_monde,
@@ -539,49 +411,9 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
         )
 
         ecran.blit(surface_affichee, (0, 0))
-        dessiner_grille_overlay(ecran)
+        dessiner_grille_overlay(ecran, camera_x, camera_y, dims, HAUTEUR_BARRE, zoom, TAILLE_CASE)
 
-        pygame.draw.rect(
-            ecran,
-            (40, 40, 40),
-            (0, dims[1] - HAUTEUR_BARRE, dims[0], HAUTEUR_BARRE)
-        )
-
-        for i, rect in enumerate(rects_icones):
-            couleur = (200, 200, 80) if i == batiment_selectionne else (100, 100, 100)
-            pygame.draw.rect(ecran, couleur, rect.inflate(8, 8))
-
-            type_actuel = TYPES_BATIMENTS[i]
-            icone = pygame.transform.smoothscale(
-                images_batiments[type_actuel][1], (TAILLE_ICONE, TAILLE_ICONE)
-            )
-            ecran.blit(icone, rect)
-
-# hud ressources
-        hud_font = font_argent
-        marge_hud = 2
-        hud_y = marge_hud
-
-        ressources_hud = [
-            (str(player.money),  (255, 235,  80), hud_or_img),
-            (str(player.food),   ( 255, 235,  80), hud_food_img),
-            (str(player.vapeur), (255, 235, 80), hud_vapeur_img),
-        ]
-
-        for i, (valeur, couleur, img) in enumerate(ressources_hud):
-            iw, ih = img.get_size()
-            hud_x = dims[0] - marge_hud - (len(ressources_hud) - i) * (iw + marge_hud)
-            ecran.blit(img, (hud_x, hud_y))
-            texte = hud_font.render(valeur, True, couleur)
-            tx = hud_x + (iw - texte.get_width()) // 2 - 13
-            ty = hud_y + (ih - texte.get_height()) // 2 + 2
-            ecran.blit(texte, (tx, ty))
-
-        if save_done_timer > 0:
-            img_w, img_h = save_done_img.get_size()
-            x = 10
-            y = 10
-            ecran.blit(save_done_img, (x, y))
+        dessiner_hud(ecran, dims, HAUTEUR_BARRE, rects_icones, batiment_selectionne, images_batiments, TYPES_BATIMENTS, TAILLE_ICONE, player, font_argent, hud_or_img, hud_food_img, hud_vapeur_img, save_done_img, save_done_timer)
 
         terminal.draw(ecran, dt)
 
