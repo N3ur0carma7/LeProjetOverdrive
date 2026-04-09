@@ -15,10 +15,10 @@ ambient_musics = [
     "assets/sounds/ambient/ambient3.mp3",
     "assets/sounds/ambient/ambient4.mp3",
     "assets/sounds/ambient/ambient5.mp3",
-    "assets/sounds/ambient/ambient6.mp3"
+    "assets/sounds/ambient/ambient6.mp3",
     "assets/sounds/ambient/ambient7.mp3",
     "assets/sounds/ambient/ambient8.mp3",
-    "assets/sounds/ambient/ambient9.mp3"
+    "assets/sounds/ambient/ambient9.mp3",
     "assets/sounds/ambient/ambient10.mp3",
     "assets/sounds/ambient/ambient11.mp3"
 ]

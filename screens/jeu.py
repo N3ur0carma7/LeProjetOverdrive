@@ -243,22 +243,29 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
         debut_x = int(camera_x // TAILLE_CASE) * TAILLE_CASE
         debut_y = int(camera_y // TAILLE_CASE) * TAILLE_CASE
 
-        couleur_grille = (20, 80, 20)
-        epaisseur = 2
-
-        
         for y in range(debut_y, debut_y + int(hauteur_vue) + TAILLE_CASE, TAILLE_CASE):
             for x in range(debut_x, debut_x + int(largeur_vue) + TAILLE_CASE, TAILLE_CASE):
                 surface.blit(herbe, (x - camera_x, y - camera_y))
-                pygame.draw.rect(
-                    surface,
-                    couleur_grille,
-                    (x - camera_x, y - camera_y, TAILLE_CASE, TAILLE_CASE),
-                    epaisseur
-                )
 
-                rect_case = (x - camera_x, y - camera_y, TAILLE_CASE, TAILLE_CASE)
-                pygame.draw.rect(surface, couleur_grille, rect_case, epaisseur)
+    def dessiner_grille_overlay(surface):
+        couleur_grille = (20, 80, 20)
+        epaisseur = 1 if zoom < 1.0 else 2
+
+        debut_x = int(camera_x // TAILLE_CASE) * TAILLE_CASE
+        debut_y = int(camera_y // TAILLE_CASE) * TAILLE_CASE
+        largeur_vue = dims[0] / zoom
+        hauteur_vue = (dims[1] - HAUTEUR_BARRE) / zoom
+
+        x_fin = debut_x + int(largeur_vue) + TAILLE_CASE
+        y_fin = debut_y + int(hauteur_vue) + TAILLE_CASE
+
+        for x in range(debut_x, x_fin + 1, TAILLE_CASE):
+            screen_x = int((x - camera_x) * zoom)
+            pygame.draw.line(surface, couleur_grille, (screen_x, 0), (screen_x, dims[1] - HAUTEUR_BARRE), epaisseur)
+
+        for y in range(debut_y, y_fin + 1, TAILLE_CASE):
+            screen_y = int((y - camera_y) * zoom)
+            pygame.draw.line(surface, couleur_grille, (0, screen_y), (dims[0], screen_y), epaisseur)
 
     en_cours = True
     acc_argent   = 0.0  # mine → money
@@ -526,12 +533,13 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
             if -80 < nx < sw + 80 and -80 < ny < sh + 80:
                 npc.dessiner_monde(surface_monde, camera_x, camera_y, image_pnj)
 
-        surface_affichee = pygame.transform.smoothscale(
+        surface_affichee = pygame.transform.scale(
             surface_monde,
             (dims[0], dims[1] - HAUTEUR_BARRE)
         )
 
         ecran.blit(surface_affichee, (0, 0))
+        dessiner_grille_overlay(ecran)
 
         pygame.draw.rect(
             ecran,
