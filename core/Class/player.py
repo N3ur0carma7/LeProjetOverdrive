@@ -50,7 +50,8 @@ class Player:
         self.pos = (0, 0)
         self.path = []
 
-        self.speed = 7
+        # speed est maintenant en pixels/seconde (7 px/frame * 60 fps = 420 px/s)
+        self.speed = 420
         self.size = 40
 
         # Animation
@@ -61,6 +62,7 @@ class Player:
         self.is_moving = False
 
         self.sprite_height = 72
+
     def hurt(self, raw_damage: int) -> float | None:
         # Inflige des dégâts au joueur
         damage = raw_damage / (self.defense * 0.05 + 1)
@@ -134,7 +136,10 @@ class Player:
                 f_score[voisin] = g_score[voisin] + self.heuristique(voisin, dest)
         return False
 
-    def update(self, taille_case: int):
+    def update(self, taille_case: int, dt: float = 1/60):
+        """Met à jour la position du joueur.
+        dt : delta time en secondes (indépendant des FPS).
+        """
         if not self.path:
             self.is_moving = False
             return
@@ -156,7 +161,10 @@ class Player:
 
         self.is_moving = True
 
-        if distance < self.speed:
+        # Déplacement en pixels/seconde * dt
+        step = self.speed * dt
+
+        if distance < step:
             self.pos = (target_x, target_y)
             self.path.pop(0)
             if not self.path:
@@ -168,7 +176,7 @@ class Player:
 
         dx /= distance
         dy /= distance
-        self.pos = (self.pos[0] + dx * self.speed, self.pos[1] + dy * self.speed)
+        self.pos = (self.pos[0] + dx * step, self.pos[1] + dy * step)
 
     def update_anim(self, dt: float):
         if self.is_moving:
@@ -235,6 +243,6 @@ class Player:
         obj.vapeur = d.get("vapeur", 0)
         obj.pos = d.get("pos", (0, 0))
         obj.path = d.get("path", [])
-        obj.speed = d.get("speed", 10)
+        obj.speed = d.get("speed", 420)
         obj.size = d.get("size", 40)
         return obj

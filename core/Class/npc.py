@@ -11,12 +11,13 @@ class Npc:
     ETAT_AU_TRAVAIL   = "au_travail"
     ETAT_VERS_MAISON  = "vers_maison"
 
-    DUREE_TRAVAIL_MIN = 60 * 8
-    DUREE_TRAVAIL_MAX = 60 * 20
-    DUREE_ERRANCE_MIN = 60 * 5
-    DUREE_ERRANCE_MAX = 60 * 15
+    # Durées en secondes (avant : en frames @ 60fps)
+    DUREE_TRAVAIL_MIN = 8.0
+    DUREE_TRAVAIL_MAX = 20.0
+    DUREE_ERRANCE_MIN = 5.0
+    DUREE_ERRANCE_MAX = 15.0
 
-    VITESSE          = 1.2   # pixels monde / frame
+    VITESSE          = 72.0  # pixels monde / seconde (1.2 px/frame * 60 fps)
     RAYON_ERRANCE    = 80    # rayon errance autour de la maison en pixels monde
     TAILLE_AFFICHAGE = 64    # hauteur sprite en pixels écran (fixe)
 
@@ -38,7 +39,8 @@ class Npc:
         # Chemin courant : liste de (px, py) monde
         self.chemin = []
 
-        self.timer = random.randint(self.DUREE_ERRANCE_MIN // 2, self.DUREE_ERRANCE_MAX)
+        # timer en secondes
+        self.timer = random.uniform(self.DUREE_ERRANCE_MIN / 2, self.DUREE_ERRANCE_MAX)
 
         # Première cible d'errance
         self.cible_x, self.cible_y = self._nouvelle_cible_errance()
@@ -80,24 +82,25 @@ class Npc:
         chemin[-1] = (dest_x, dest_y)
         return chemin
 
-    def _avancer_vers(self, tx, ty):
+    def _avancer_vers(self, tx, ty, dt):
         """Avance en ligne directe vers (tx, ty). Retourne True si atteint."""
         dx = tx - self.monde_x
         dy = ty - self.monde_y
         dist = math.hypot(dx, dy)
-        if dist <= self.VITESSE:
+        step = self.VITESSE * dt
+        if dist <= step:
             self.monde_x = tx
             self.monde_y = ty
             return True
-        self.monde_x += dx / dist * self.VITESSE
-        self.monde_y += dy / dist * self.VITESSE
+        self.monde_x += dx / dist * step
+        self.monde_y += dy / dist * step
         return False
 
-    def _avancer_chemin(self):
+    def _avancer_chemin(self, dt):
         """Suit le chemin waypoint par waypoint. Retourne True si arrivé."""
         if not self.chemin:
             return True
-        atteint = self._avancer_vers(*self.chemin[0])
+        atteint = self._avancer_vers(*self.chemin[0], dt)
         if atteint:
             self.chemin.pop(0)
         return len(self.chemin) == 0
@@ -109,37 +112,40 @@ class Npc:
     def assigner_travail(self, batiment):
         self.lieu_travail = batiment
 
-    def update(self):
+    def update(self, dt: float = 1/60):
+        """Met à jour le NPC.
+        dt : delta time en secondes (indépendant des FPS).
+        """
         if self.etat == self.ETAT_ERRANCE:
-            self._update_errance()
+            self._update_errance(dt)
         elif self.etat == self.ETAT_VERS_TRAVAIL:
-            self._update_vers_travail()
+            self._update_vers_travail(dt)
         elif self.etat == self.ETAT_AU_TRAVAIL:
-            self._update_au_travail()
+            self._update_au_travail(dt)
         elif self.etat == self.ETAT_VERS_MAISON:
-            self._update_vers_maison()
+            self._update_vers_maison(dt)
 
-    def _update_errance(self):
-        atteint = self._avancer_vers(self.cible_x, self.cible_y)
+    def _update_errance(self, dt):
+        atteint = self._avancer_vers(self.cible_x, self.cible_y, dt)
         if atteint:
             self.cible_x, self.cible_y = self._nouvelle_cible_errance()
 
-        self.timer -= 1
+        self.timer -= dt
         if self.timer <= 0 and self.lieu_travail is not None:
             dest = self._centre_pixels(self.lieu_travail)
             self.chemin = self._construire_chemin_direct(*dest)
             self.etat = self.ETAT_VERS_TRAVAIL
 
-    def _update_vers_travail(self):
+    def _update_vers_travail(self, dt):
         if self.lieu_travail is None:
             self._rentrer()
             return
-        if self._avancer_chemin():
+        if self._avancer_chemin(dt):
             self.etat = self.ETAT_AU_TRAVAIL
-            self.timer = random.randint(self.DUREE_TRAVAIL_MIN, self.DUREE_TRAVAIL_MAX)
+            self.timer = random.uniform(self.DUREE_TRAVAIL_MIN, self.DUREE_TRAVAIL_MAX)
 
-    def _update_au_travail(self):
-        self.timer -= 1
+    def _update_au_travail(self, dt):
+        self.timer -= dt
         if self.timer <= 0:
             self._rentrer()
 
@@ -154,10 +160,10 @@ class Npc:
         self.chemin = self._construire_chemin_direct(*dest)
         self.etat = self.ETAT_VERS_MAISON
 
-    def _update_vers_maison(self):
-        if self._avancer_chemin():
+    def _update_vers_maison(self, dt):
+        if self._avancer_chemin(dt):
             self.etat = self.ETAT_ERRANCE
-            self.timer = random.randint(self.DUREE_ERRANCE_MIN, self.DUREE_ERRANCE_MAX)
+            self.timer = random.uniform(self.DUREE_ERRANCE_MIN, self.DUREE_ERRANCE_MAX)
             self.cible_x, self.cible_y = self._nouvelle_cible_errance()
 
     # ------------------------------------------------------------------
