@@ -205,6 +205,8 @@ class Terminal:
         self._font           = None
         self._matrix_rain    = None
         self._matrix_pending = False
+        self.command_history = []
+        self.history_index   = -1
 
     def _get_font(self):
         if self._font is None:
@@ -219,6 +221,7 @@ class Terminal:
         if self.visible:
             self.input_text    = ""
             self.scroll_offset = 0
+            self.history_index = -1
 
     def handle_event(self, event, player, batiments, extra_ctx=None):
         if not self.visible:
@@ -228,17 +231,33 @@ class Terminal:
                 self._executer(player, batiments, extra_ctx or {})
             elif event.key == pygame.K_BACKSPACE:
                 self.input_text = self.input_text[:-1]
+                self.history_index = -1
             elif event.key == pygame.K_UP:
-                self.scroll_offset = min(self.scroll_offset + 1,
-                                         max(0, len(self.historique) - 1))
+                if self.command_history:
+                    if self.history_index == -1:
+                        self.history_index = 0
+                    else:
+                        self.history_index = min(self.history_index + 1, len(self.command_history) - 1)
+                    self.input_text = self.command_history[len(self.command_history) - 1 - self.history_index]
             elif event.key == pygame.K_DOWN:
-                self.scroll_offset = max(0, self.scroll_offset - 1)
+                if self.history_index > 0:
+                    self.history_index -= 1
+                    self.input_text = self.command_history[len(self.command_history) - 1 - self.history_index]
+                elif self.history_index == 0:
+                    self.history_index = -1
+                    self.input_text = ""
+            elif event.key == pygame.K_PAGEUP:
+                self.scroll_offset = min(self.scroll_offset + 5,
+                                         max(0, len(self.historique) - 1))
+            elif event.key == pygame.K_PAGEDOWN:
+                self.scroll_offset = max(0, self.scroll_offset - 5)
             elif event.key == pygame.K_TAB:
                 self._autocomplete()
             else:
                 char = event.unicode
                 if char and char.isprintable() and char != "²":
                     self.input_text += char
+                    self.history_index = -1
             return True
         return False
 
@@ -247,6 +266,12 @@ class Terminal:
         self.input_text = ""
         if not raw:
             return
+
+        # Add to command history
+        self.command_history.append(raw)
+        if len(self.command_history) > 100:
+            self.command_history.pop(0)
+        self.history_index = -1
 
         self._log(f"> {raw}")
 
