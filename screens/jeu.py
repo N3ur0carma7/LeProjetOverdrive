@@ -1,6 +1,7 @@
 import pygame
 import math
 import os
+import threading
 from multiplayer.serveur import *
 import multiplayer.client as client_module
 from multiplayer.client import send_list_client, receive_loop, send_batiment_client, send_liste_batiments_client, send_liste_joueurs_client, receive_callback
@@ -11,6 +12,8 @@ import random
 stop_event = threading.Event()
 batiments = []
 players = []
+batiments_recus = []
+joueurs_recus = []
 def on_message_recu(result):
     global batiments_recus, joueurs_recus
     message, type = result
@@ -34,19 +37,6 @@ from screens.utils import collision, calculer_rects_icones, souris_vers_case, jo
 from screens.game_logic import synchroniser_npcs, calculer_production
 from screens.render import dessiner_monde, dessiner_hud
 
-stop_event = threading.Event()
-batiments = []
-players = []
-def on_message_recu(result):
-    global batiments_recus, joueurs_recus
-    message, type = result
-    if type == 'liste_batiments':
-        batiments_recus = message
-    elif type == 'liste_joueurs':
-        joueurs_recus = message
-
-client_module.receive_callback = on_message_recu
-
 
 from core.Class.player import Player
 from core.Class.batiments import Batiment
@@ -57,10 +47,19 @@ import core.sounds as sound
 from screens.tutorial import run_tutorial
 from screens.terminal import Terminal
 
+def corriger_transparence(surface):
+    """Corrige les pixels semi-transparents en les rendant complètement transparents"""
+    width, height = surface.get_size()
+    for x in range(width):
+        for y in range(height):
+            color = surface.get_at((x, y))
+            if color.a < 20:  # Seuil d'alpha faible
+                surface.set_at((x, y), (0, 0, 0, 0))  # Complètement transparent
+    return surface
+
 def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
     global batiments
     global players
-    global update_finished
     HAUTEUR_BARRE = 100
     LARGEUR_ECRAN, HAUTEUR_ECRAN = ecran.get_size()
     dims = [LARGEUR_ECRAN, HAUTEUR_ECRAN]  # mutable pour mise a jour au resize
@@ -87,9 +86,9 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
             3: pygame.image.load("assets/buildings/mine_lvl3.png").convert_alpha()
         },
         Batiment.TYPE_FARM: {
-            1: pygame.image.load("assets/buildings/farm_lvl1.png").convert_alpha(),
-            2: pygame.image.load("assets/buildings/farm_lvl2.png").convert_alpha(),
-            3: pygame.image.load("assets/buildings/farm_lvl3.png").convert_alpha()
+            1: corriger_transparence(pygame.image.load("assets/buildings/farm_lvl1.png").convert_alpha()),
+            2: corriger_transparence(pygame.image.load("assets/buildings/farm_lvl2.png").convert_alpha()),
+            3: corriger_transparence(pygame.image.load("assets/buildings/farm_lvl3.png").convert_alpha())
         }
     }
 
@@ -117,14 +116,6 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
     save_done_img = pygame.image.load("assets/save_done.png").convert_alpha()
 
     players.append(player)
-    # Dictionnaire des bâtiments placés
-    # clé : (x_case, y_case)
-    # valeur : index du bâtiment
-    is_new_game = not os.path.exists("save/save.json")
-    if not dev_mode and os.path.exists("save/save.json"):
-        if not load_save(batiments, player):
-            print("ERREUR CRITIQUE: Lecture du fichier save/save.json")
-            return False
     # Dictionnaire des bâtiments placés
     # clé : (x_case, y_case)
     # valeur : index du bâtiment
@@ -189,19 +180,6 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
 
     rects_icones = calculer_rects_icones(dims, HAUTEUR_BARRE, TAILLE_ICONE)
     en_cours = True
-    acc_argent   = 0.0  # mine → money
-    acc_food     = 0.0  # farm → food
-    acc_vapeur   = 0.0  # generateur → vapeur
-    save_done_timer = 0.0
-
-    ambient_playlist = list(range(len(sound.ambient_musics)))
-    random.shuffle(ambient_playlist)
-    current_playlist_index = 0
-    ambient_delay_timer = 0.0
-
-    while en_cours:
-        dt = horloge.tick(FPS) / 1000.0
-        save_done_timer = max(0, save_done_timer - dt)
     acc_argent   = 0.0  # mine → money
     acc_food     = 0.0  # farm → food
     acc_vapeur   = 0.0  # generateur → vapeur
@@ -403,7 +381,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
 
         dessiner_grille(surface_monde, camera_x, camera_y, dims, HAUTEUR_BARRE, zoom, herbe, TAILLE_CASE)
 
-        dessiner_monde(surface_monde, batiments, images_batiments, camera_x, camera_y, TAILLE_CASE, batiment_selectionne, TYPES_BATIMENTS, player, npcs, image_pnj, dt)
+        dessiner_monde(surface_monde, batiments, images_batiments, camera_x, camera_y, TAILLE_CASE, batiment_selectionne, TYPES_BATIMENTS, player, npcs, image_pnj, dt, zoom)
 
         surface_affichee = pygame.transform.scale(
             surface_monde,
