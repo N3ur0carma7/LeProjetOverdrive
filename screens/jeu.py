@@ -476,7 +476,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
                 mode_sell = False
 
 
-        player.update(TAILLE_CASE)
+        player.update(TAILLE_CASE, dt)
         player.update_anim(dt)
 
         ecran.fill((0, 0, 0))
@@ -519,7 +519,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
         player.draw_player(surface_monde, camera_x, camera_y)
 
         for npc in npcs:
-            npc.update()
+            npc.update(dt)
             nx = int(npc.monde_x - camera_x)
             ny = int(npc.monde_y - camera_y)
             sw, sh = surface_monde.get_size()
