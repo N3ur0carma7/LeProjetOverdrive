@@ -38,7 +38,7 @@ from core.Class.player import Player
 from core.Class.batiments import Batiment
 from core.Class.npc import Npc
 from core.saves import load_save
-from screens.GUI.menu_amelioration import afficher_menu_amelioration
+
 import core.sounds as sound
 from screens.tutorial import run_tutorial
 from screens.terminal import Terminal
@@ -194,10 +194,10 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
     ambient_delay_timer = 0.0
     update = threading.Thread(target=on_message_recu, args=(TAILLE_CASE,), daemon=True)
     update.start()
-    if client_module.CLIENT is not None and online:
-        send_liste_batiments_client(batiments, client_module.CLIENT)
-    if client_module.CLIENT is not None and online:
-        send_liste_joueurs_client(players, client_module.CLIENT)
+    #if client_module.CLIENT is not None and online:
+    #    send_liste_batiments_client(batiments, client_module.CLIENT)
+    #if client_module.CLIENT is not None and online:
+    #    send_liste_joueurs_client(players, client_module.CLIENT)
     while en_cours:
         dt = horloge.tick(FPS) / 1000.0
         save_done_timer = max(0, save_done_timer - dt)
