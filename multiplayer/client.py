@@ -164,12 +164,12 @@ def handle_message_client(msg, client):
 
 
 
-receive_callback = None
 
 
+result = None
 
 def receive_loop(client):
-    global recv_buffer
+    global recv_buffer, result
     while True:
         try:
             chunk = client.recv(4096)
@@ -198,8 +198,6 @@ def receive_loop(client):
                     return
 
                 result = handle_message_client(msg, client)
-                if receive_callback and result[0] is not None:
-                    receive_callback(result)  # transmet le message au jeu
 
         except OSError:
             recv_buffer = b""

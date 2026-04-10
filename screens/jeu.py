@@ -4,7 +4,8 @@ import os
 import threading
 from multiplayer.serveur import *
 import multiplayer.client as client_module
-from multiplayer.client import send_list_client, receive_loop, send_batiment_client, send_liste_batiments_client, send_liste_joueurs_client, receive_callback
+from multiplayer.client import send_list_client, receive_loop, send_batiment_client, send_liste_batiments_client, \
+    send_liste_joueurs_client
 from core.Class.batiments import *
 import time
 import random
@@ -12,18 +13,16 @@ import random
 stop_event = threading.Event()
 batiments = []
 players = []
-batiments_recus = []
-joueurs_recus = []
-def on_message_recu(result):
-    global batiments_recus, joueurs_recus
+
+def on_message_recu():
+    global batiments, players
     while True:
-        if result is not None:
-            message, type = result
-            if type == 'liste_batiments':
-                batiments_recus = message
-            elif type == 'liste_joueurs':
-                joueurs_recus = message
-        time.sleep(0.2)
+        if client_module.result is not None:
+            message, type = client_module.result
+            if type == "liste_batiments":
+                batiments = message
+            elif type == "liste_joueurs":
+                players = message
 
 
 
@@ -190,7 +189,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
     random.shuffle(ambient_playlist)
     current_playlist_index = 0
     ambient_delay_timer = 0.0
-    update = threading.Thread(target=on_message_recu, args=(client_module.receive_callback,), daemon=True)
+    update = threading.Thread(target=on_message_recu, args=(), daemon=True)
     update.start()
     while en_cours:
         dt = horloge.tick(FPS) / 1000.0
