@@ -16,13 +16,15 @@ batiments_recus = []
 joueurs_recus = []
 def on_message_recu(result):
     global batiments_recus, joueurs_recus
-    message, type = result
-    if type == 'liste_batiments':
-        batiments_recus = message
-    elif type == 'liste_joueurs':
-        joueurs_recus = message
+    while True:
+        if result is not None:
+            message, type = result
+            if type == 'liste_batiments':
+                batiments_recus = message
+            elif type == 'liste_joueurs':
+                joueurs_recus = message
+        time.sleep(0.2)
 
-client_module.receive_callback = on_message_recu
 
 
 from core.Class.player import Player
@@ -188,7 +190,8 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
     random.shuffle(ambient_playlist)
     current_playlist_index = 0
     ambient_delay_timer = 0.0
-
+    update = threading.Thread(target=on_message_recu, args=(client_module.receive_callback,), daemon=True)
+    update.start()
     while en_cours:
         dt = horloge.tick(FPS) / 1000.0
         save_done_timer = max(0, save_done_timer - dt)
