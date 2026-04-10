@@ -2,7 +2,7 @@ import math
 import random
 import pygame
 import heapq
-
+import multiplayer.client as client_module
 _COL_BOUNDS = [(18,71),(88,148),(155,221),(232,294),(306,363),(375,430)]
 _ROW_BOUNDS = [(32,109),(173,251),(305,388),(428,511)]
 

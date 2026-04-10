@@ -194,6 +194,10 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
     ambient_delay_timer = 0.0
     update = threading.Thread(target=on_message_recu, args=(TAILLE_CASE,), daemon=True)
     update.start()
+    if client_module.CLIENT is not None and online:
+        send_liste_batiments_client(batiments, client_module.CLIENT)
+    if client_module.CLIENT is not None and online:
+        send_liste_joueurs_client(players, client_module.CLIENT)
     while en_cours:
         dt = horloge.tick(FPS) / 1000.0
         save_done_timer = max(0, save_done_timer - dt)
@@ -289,6 +293,9 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
                     if sy < HAUTEUR_ECRAN - HAUTEUR_BARRE:
                         if not players[indice].a_star(case, TAILLE_CASE):
                             print("Chemin bloqué")
+                        if client_module.CLIENT is not None and online:
+                            send_liste_joueurs_client(players[indice], client_module.CLIENT)
+
 
 
 # Clic gauche
@@ -385,7 +392,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
 
         dessiner_grille(surface_monde, camera_x, camera_y, dims, HAUTEUR_BARRE, zoom, herbe, TAILLE_CASE)
 
-        dessiner_monde(surface_monde, batiments, images_batiments, camera_x, camera_y, TAILLE_CASE, batiment_selectionne, TYPES_BATIMENTS, player, npcs, image_pnj, dt, zoom)
+        dessiner_monde(surface_monde, batiments, images_batiments, camera_x, camera_y, TAILLE_CASE, batiment_selectionne, TYPES_BATIMENTS, players[indice], npcs, image_pnj, dt, zoom)
 
         surface_affichee = pygame.transform.scale(
             surface_monde,
@@ -395,7 +402,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
         ecran.blit(surface_affichee, (0, 0))
         dessiner_grille_overlay(ecran, camera_x, camera_y, dims, HAUTEUR_BARRE, zoom, TAILLE_CASE)
 
-        dessiner_hud(ecran, dims, HAUTEUR_BARRE, rects_icones, batiment_selectionne, images_batiments, TYPES_BATIMENTS, TAILLE_ICONE, player, font_argent, hud_or_img, hud_food_img, hud_vapeur_img, save_done_img, save_done_timer)
+        dessiner_hud(ecran, dims, HAUTEUR_BARRE, rects_icones, batiment_selectionne, images_batiments, TYPES_BATIMENTS, TAILLE_ICONE, players[indice], font_argent, hud_or_img, hud_food_img, hud_vapeur_img, save_done_img, save_done_timer)
 
         terminal.draw(ecran, dt)
 
