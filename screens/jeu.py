@@ -294,7 +294,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
                         if not players[indice].a_star(case, TAILLE_CASE):
                             print("Chemin bloqué")
                         if client_module.CLIENT is not None and online:
-                            send_liste_joueurs_client(players[indice], client_module.CLIENT)
+                            send_liste_joueurs_client(players, client_module.CLIENT)
 
 
 
