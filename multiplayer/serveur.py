@@ -239,8 +239,9 @@ def stop_server():
     for client in clients.values():
         client.close()
     STOPSEARCH = True
-
+number_connected = 0
 def start(server):
+    global number_connected
     end = False
     broadcast_thread = threading.Thread(target=search_client, daemon=True)
     broadcast_thread.start()
