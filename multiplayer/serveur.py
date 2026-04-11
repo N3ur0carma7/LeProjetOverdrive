@@ -74,7 +74,7 @@ def handle_client(client, addr):
             else:
                 message, type = handle_message_recieved(msg, addr)
                 for i in clients.keys():
-                    if i != addr:
+                    if i != addr or i == addr:
                             if type == "list":
                                 send_list_server(message, clients[i])
                             elif type == "dict":
@@ -102,11 +102,12 @@ def handle_client(client, addr):
                             elif type == "liste_joueurs":
                                 payload = [p.to_dict() for p in message]
                                 payload[0]["pos"] = list(payload[0]["pos"])
-                                for i in range (len(payload[0]["path"])):
-                                    payload[0]["path"][i] = list(payload[0]["path"][i])
+                                for j in range (len(payload[0]["path"])):
+                                    payload[0]["path"][j] = list(payload[0]["path"][j])
                                 data = json.dumps({"type": "liste_joueurs", "payload": payload})
                                 send_client(data, clients[i])
-        except Exception:
+
+        except Exception as e:
             print("oups")
             break
     if addr in clients:
@@ -172,9 +173,7 @@ def handle_message_recieved (msg, addr):
             liste_dicts[0]["pos"] = tuple(liste_dicts[0]["pos"])
             for i in range (len(liste_dicts[0]["path"])):
                 liste_dicts[0]["path"][i] = tuple(liste_dicts[0]["path"][i])
-            print(liste_dicts)
             plays = [Player.from_dict(d) for d in liste_dicts]
-            print(plays)
             print(f"[LISTE JOUEURS] {addr} : {[str(b) for b in plays]}")
             return plays, "liste_joueurs"
     except json.JSONDecodeError:
@@ -186,6 +185,7 @@ def disconnect (client):
     client.close()
 
 def send_client (msg, client):
+    global FORMAT
     message = msg.encode(FORMAT)
     msg_length = len(message)
     send_length = str(msg_length).encode(FORMAT)

@@ -144,13 +144,16 @@ def handle_message_client(msg, client):
             return bat, "batiment"
 
         elif msg_type == "liste_batiments":
+            print("ok")
             liste_dicts = data["payload"]
             bats = [Batiment.from_dict(d) for d in liste_dicts]
             print(f"[LISTE BATIMENTS] reçue : {[str(b) for b in bats]}")
             return bats, "liste_batiments"
 
         elif msg_type == "liste_joueurs":
+            print("arriver")
             liste_dicts = data["payload"]
+            print(liste_dicts)
             liste_dicts[0]["pos"] = tuple(liste_dicts[0]["pos"])
             for i in range (len(liste_dicts[0]["path"])):
                 liste_dicts[0]["path"][i] = tuple(liste_dicts[0]["path"][i])
@@ -208,6 +211,7 @@ def receive_loop(client):
 
 
 def send_server (msg, client):
+    global FORMAT
     message = msg.encode(FORMAT)
     msg_length = len(message)
     send_length = str(msg_length).encode(FORMAT)
@@ -262,7 +266,6 @@ def send_batiment_client(batiment, client):
 def send_liste_batiments_client(liste_batiments, client):
     # transforme chaque Batiment en dict sérialisable
     payload = [b.to_dict() for b in liste_batiments]
-    print(payload)
     data = json.dumps({"type": "liste_batiments", "payload": payload})
     send_server(data, client)
 
@@ -271,7 +274,6 @@ def send_liste_joueurs_client(liste_joueurs, client):
     payload[0]["pos"] = list(payload[0]["pos"])
     for i in range (len(payload[0]["path"] )):
         payload[0]["path"][i] = list(payload[0]["path"][i])
-    print(payload)
     data = json.dumps({"type": "liste_joueurs", "payload": payload})
     send_server(data, client)
 
