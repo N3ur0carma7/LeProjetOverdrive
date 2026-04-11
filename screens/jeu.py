@@ -39,7 +39,7 @@ from core.Class.batiments import Batiment
 from core.Class.npc import Npc
 from core.saves import load_save
 
-import core.sounds as sound
+
 from screens.tutorial import run_tutorial
 from screens.terminal import Terminal
 from screens.utils import collision, calculer_rects_icones, souris_vers_case, joueur_a_portee, dessiner_grille, dessiner_grille_overlay

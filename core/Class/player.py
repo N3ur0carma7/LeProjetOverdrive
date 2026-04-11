@@ -230,7 +230,7 @@ class Player:
 
     @classmethod
     def from_dict(cls, d):
-        obj = cls(d["hp_max"], d["hp"], d["crit_chance"], d["crit_damage"], d["raw_damage"], d["defense"], d["health_regen"], d["money"], d["pos"], d["path"], d["speed"], d["size"])
+        obj = cls()
         obj.hp_max = d.get("hp_max", 100)
         obj.hp = d.get("hp", 100)
         obj.crit_chance = d.get("crit_chance", 20)

@@ -110,4 +110,5 @@ class Batiment:
         obj.niveau = d.get("niveau", 1)
         obj.largeur = d.get("largeur", 175)
         obj.hauteur = d.get("hauteur", 175)
+
         return obj

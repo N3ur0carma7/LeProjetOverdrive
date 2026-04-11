@@ -151,6 +151,9 @@ def handle_message_client(msg, client):
 
         elif msg_type == "liste_joueurs":
             liste_dicts = data["payload"]
+            liste_dicts[0]["pos"] = tuple(liste_dicts[0]["pos"])
+            for i in range (len(liste_dicts[0]["path"])):
+                liste_dicts[0]["path"][i] = tuple(liste_dicts[0]["path"][i])
             plays = [Player.from_dict(d) for d in liste_dicts]
             print(f"[LISTE JOUEURS] reçue : {[str(b) for b in plays]}")
             return plays, "liste_joueurs"
@@ -259,11 +262,16 @@ def send_batiment_client(batiment, client):
 def send_liste_batiments_client(liste_batiments, client):
     # transforme chaque Batiment en dict sérialisable
     payload = [b.to_dict() for b in liste_batiments]
+    print(payload)
     data = json.dumps({"type": "liste_batiments", "payload": payload})
     send_server(data, client)
 
 def send_liste_joueurs_client(liste_joueurs, client):
     payload = [j.to_dict() for j in liste_joueurs]
+    payload[0]["pos"] = list(payload[0]["pos"])
+    for i in range (len(payload[0]["path"] )):
+        payload[0]["path"][i] = list(payload[0]["path"][i])
+    print(payload)
     data = json.dumps({"type": "liste_joueurs", "payload": payload})
     send_server(data, client)
 
