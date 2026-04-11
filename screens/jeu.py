@@ -18,7 +18,8 @@ def on_message_recu(TAILLE_CASE):
     global batiments, players
     while True:
         while len(players) < number_connected:
-            new_player(TAILLE_CASE)
+            PLAYER = new_player(TAILLE_CASE)
+            players.append(PLAYER)
         if client_module.result is not None:
             message, type = client_module.result
             if type == "liste_batiments":
