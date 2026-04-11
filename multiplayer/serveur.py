@@ -74,7 +74,7 @@ def handle_client(client, addr):
             else:
                 message, type = handle_message_recieved(msg, addr)
                 for i in clients.keys():
-                    if i != addr or i == addr:
+                    if i != addr:
                             if type == "list":
                                 send_list_server(message, clients[i])
                             elif type == "dict":
