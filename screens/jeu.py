@@ -13,14 +13,15 @@ import random
 stop_event = threading.Event()
 batiments = []
 players = []
-indice = number_connected-1
-def on_message_recu(TAILLE_CASE):
-    global batiments, players
+indice = 0
+
+def on_message_recu():
+    global batiments, players, indice
     while True:
-        while len(players) < number_connected:
-            new_player(TAILLE_CASE)
         if client_module.result is not None:
             message, type = client_module.result
+            if type == "int":
+                indice = message
             if type == "liste_batiments":
                 batiments = message
             elif type == "liste_joueurs":
@@ -29,7 +30,6 @@ def on_message_recu(TAILLE_CASE):
 def new_player(TAILLE_CASE):
     global players
     player = Player()
-
     # Spawn du joueur au milieu d'une case
     player.pos = (TAILLE_CASE / 2, TAILLE_CASE / 2)
     players.append(player)
@@ -192,12 +192,9 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
     random.shuffle(ambient_playlist)
     current_playlist_index = 0
     ambient_delay_timer = 0.0
-    update = threading.Thread(target=on_message_recu, args=(TAILLE_CASE,), daemon=True)
-    update.start()
-    if client_module.CLIENT is not None and online:
-        send_liste_batiments_client(batiments, client_module.CLIENT)
-    if client_module.CLIENT is not None and online:
-        send_liste_joueurs_client(players, client_module.CLIENT)
+    if not dev_mode:
+        update = threading.Thread(target=on_message_recu, args=(), daemon=True)
+        update.start()
     while en_cours:
         dt = horloge.tick(FPS) / 1000.0
         save_done_timer = max(0, save_done_timer - dt)

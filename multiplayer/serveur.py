@@ -5,8 +5,7 @@ import time
 import ast
 from core.Class.batiments import *
 from core.Class.player import *
-from multiplayer.client import CLIENT
-
+from screens.jeu import batiments, players
 FORMAT = "utf-8"
 HEADER = 64
 PORT = 5050
@@ -62,6 +61,19 @@ def str_to_tuple_key(dic):
 def handle_client(client, addr):
     print(f"[NEW CLIENT] {addr} connected\n")
     send_dict_server({"server": "hello client"}, client)
+    send_int_server(number_connected-1, client)
+    if number_connected > 1:
+        if batiments != []:
+            payload = [b.to_dict() for b in batiments]  # message = liste de Batiment
+            data = json.dumps({"type": "liste_batiments", "payload": payload})
+            send_client(data, client)
+        if players != []:
+            payload = [p.to_dict() for p in players]
+            payload[0]["pos"] = list(payload[0]["pos"])
+            for j in range(len(payload[0]["path"])):
+                payload[0]["path"][j] = list(payload[0]["path"][j])
+            data = json.dumps({"type": "liste_joueurs", "payload": payload})
+            send_client(data, client)
     while not stop_event.is_set():
         try:
             msg_len_str = client.recv(HEADER).decode(FORMAT).strip()
@@ -247,7 +259,9 @@ def stop_server():
     for client in clients.values():
         client.close()
     STOPSEARCH = True
+
 number_connected = 0
+
 def start(server):
     global number_connected
     end = False
