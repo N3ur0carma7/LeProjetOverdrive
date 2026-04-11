@@ -15,19 +15,29 @@ batiments = []
 players = []
 indice = 0
 
-def on_message_recu():
+def on_message_recu(TAILLE_CASE, sruface, camera_x, camera_y):
     global batiments, players, indice
     while True:
         if client_module.result is not None:
             message, type = client_module.result
             if type == "int":
                 indice = message
+                if indice >= len(players):
+                    new_player(TAILLE_CASE, sruface, camera_x, camera_y)
+
             if type == "liste_batiments":
                 batiments = message
             elif type == "liste_joueurs":
                 players = message
 
-def new_player(TAILLE_CASE):
+def new_player(TAILLE_CASE, surface, camera_x, camera_y):
+    global players
+    player = Player()
+    # Spawn du joueur au milieu d'une case
+    player.pos = (TAILLE_CASE / 2, TAILLE_CASE / 2)
+    player.draw_player(surface, camera_x, camera_y)
+    players.append(player)
+def new_player_ez(TAILLE_CASE):
     global players
     player = Player()
     # Spawn du joueur au milieu d'une case
@@ -118,7 +128,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
     hud_food_img   = pygame.image.load("assets/food.png").convert_alpha()
     hud_vapeur_img = pygame.image.load("assets/vapeur.png").convert_alpha()
     save_done_img = pygame.image.load("assets/save_done.png").convert_alpha()
-    new_player(TAILLE_CASE)
+    new_player_ez(TAILLE_CASE)
     # Dictionnaire des bâtiments placés
     # clé : (x_case, y_case)
     # valeur : index du bâtiment
@@ -193,7 +203,13 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
     current_playlist_index = 0
     ambient_delay_timer = 0.0
     if not dev_mode:
-        update = threading.Thread(target=on_message_recu, args=(), daemon=True)
+        lw, lh = dims[0], dims[1]
+        largeur_vue = lw / 1.0
+        hauteur_vue = (lh - HAUTEUR_BARRE) / 1.0
+        surf = pygame.Surface(
+            (math.ceil(largeur_vue), math.ceil(hauteur_vue))
+        ).convert()
+        update = threading.Thread(target=on_message_recu, args=(TAILLE_CASE, surf, camera_x, camera_y), daemon=True)
         update.start()
     while en_cours:
         dt = horloge.tick(FPS) / 1000.0

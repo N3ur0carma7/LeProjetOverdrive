@@ -5,7 +5,7 @@ import time
 import ast
 from core.Class.batiments import *
 from core.Class.player import *
-from screens.jeu import batiments, players
+import screens.jeu as jeu
 FORMAT = "utf-8"
 HEADER = 64
 PORT = 5050
@@ -63,12 +63,12 @@ def handle_client(client, addr):
     send_dict_server({"server": "hello client"}, client)
     send_int_server(number_connected-1, client)
     if number_connected > 1:
-        if batiments != []:
-            payload = [b.to_dict() for b in batiments]  # message = liste de Batiment
+        if jeu.batiments != []:
+            payload = [b.to_dict() for b in jeu.batiments]  # message = liste de Batiment
             data = json.dumps({"type": "liste_batiments", "payload": payload})
             send_client(data, client)
-        if players != []:
-            payload = [p.to_dict() for p in players]
+        if jeu.players != []:
+            payload = [p.to_dict() for p in jeu.players]
             payload[0]["pos"] = list(payload[0]["pos"])
             for j in range(len(payload[0]["path"])):
                 payload[0]["path"][j] = list(payload[0]["path"][j])
