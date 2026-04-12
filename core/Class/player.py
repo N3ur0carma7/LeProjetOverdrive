@@ -110,7 +110,8 @@ class Player:
 
             if current == dest:
                 self.path = self.reconstruire_path(came_from, current)
-                client_module.send_liste_joueurs_client(players, client_module.CLIENT)
+                if client_module.CLIENT is not None:
+                    client_module.send_liste_joueurs_client(players, client_module.CLIENT)
                 return True
 
             open_set.remove(current)

@@ -175,12 +175,14 @@ def handle_message_client(msg, client):
 result = None
 
 def receive_loop(client):
-    global recv_buffer, result
+    global recv_buffer, result, is_connected
+    is_connected = True
     while True:
         try:
             chunk = client.recv(4096)
             if not chunk:
                 print("[DISCONNECTED] serveur déconnecté")
+                is_connected = False
                 recv_buffer = b""
                 break
             recv_buffer += chunk
@@ -200,6 +202,7 @@ def receive_loop(client):
                 recv_buffer = recv_buffer[HEADER + msg_len:]
 
                 if msg == DISCONNECT_MESSAGE:
+                    is_connected = False
                     client.close()
                     return
 
@@ -290,9 +293,9 @@ def disconnect():
             CLIENT = None
             recv_buffer = b""
 thread_loop = None
-
+is_connected = False
 def connection():
-    global CLIENT, recv_buffer, thread_loop
+    global CLIENT, recv_buffer, thread_loop, is_connected
     if CLIENT is not None:
         try:
             CLIENT.close()
@@ -312,6 +315,7 @@ def connection():
     ADDR = (SERVER, PORT)
     try:
         CLIENT.connect(ADDR)
+        is_connected = True
         print(f"[SERVER] {SERVER} connected")
         thread_loop = threading.Thread(target=receive_loop, args=(CLIENT,), daemon=True)
         thread_loop.start()

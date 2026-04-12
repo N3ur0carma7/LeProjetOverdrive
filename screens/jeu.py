@@ -5,7 +5,7 @@ import threading
 from multiplayer.serveur import *
 import multiplayer.client as client_module
 from multiplayer.client import send_list_client, receive_loop, send_batiment_client, send_liste_batiments_client, \
-    send_liste_joueurs_client, CLIENT, send_str_client
+    send_liste_joueurs_client, CLIENT, send_str_client, is_connected
 from core.Class.batiments import *
 import time
 import random
@@ -15,28 +15,35 @@ batiments = []
 players = []
 indice = 0
 connected = 0
+dt = 0.0
 def on_message_recu(TAILLE_CASE):
     global batiments, players, indice, connected
     messageprec = None
-    send_str_client("pos", client_module.CLIENT)
-    while True:
-        if client_module.result is not None:
-            message, type = client_module.result
-            if connected > len(players) or indice == len(players):
-                new_player(TAILLE_CASE)
-            if message != messageprec:
-                if type == "float":
-                    connected = message
-                if type == "int":
-                    indice = message
-                    print(indice)
-                if type == "liste_batiments":
-                    batiments = message
-                elif type == "liste_joueurs":
-                    players = message
+    is_connected = True
+    while is_connected:
+        send_str_client("pos", client_module.CLIENT)
+        while True:
+            if client_module.result is not None:
+                message, type = client_module.result
+                if connected > len(players) or indice == len(players):
+                    new_player(TAILLE_CASE)
+                if message != messageprec:
+                    if type == "float":
+                        connected = message
+                    if type == "int":
+                        indice = message
+                        print(indice)
+                    if type == "liste_batiments":
+                        batiments = message
+                    elif type == "liste_joueurs":
+                        if message != players:
+                            for player in players:
+                                player.update(TAILLE_CASE, dt)
+                                player.update_anim(dt)
+                        players = message
 
-            messageprec = message
-            time.sleep(0.1)
+                messageprec = message
+                time.sleep(0.1)
 
 def new_player(TAILLE_CASE):
     global players
@@ -86,7 +93,7 @@ surface_monde, camera_x, camera_y = None, None, None
 def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
     global batiments, indice
     global players
-    global surface_monde, camera_x, camera_y
+    global surface_monde, camera_x, camera_y, dt
     HAUTEUR_BARRE = 100
     LARGEUR_ECRAN, HAUTEUR_ECRAN = ecran.get_size()
     dims = [LARGEUR_ECRAN, HAUTEUR_ECRAN]  # mutable pour mise a jour au resize
