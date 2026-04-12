@@ -43,8 +43,9 @@ def new_player(TAILLE_CASE):
 
 def draw_players(surface, camera_x, camera_y):
     global players
-    for i in players:
-        players[indice].draw_player(surface, camera_x, camera_y)
+    if surface and camera_x and camera_y is not None:
+        for player in players:
+            player.draw_player(surface, camera_x, camera_y)
 
 from core.Class.player import Player
 from core.Class.batiments import Batiment
@@ -76,10 +77,12 @@ def corriger_transparence(surface):
             if color.a < 20:
                 surface.set_at((x, y), (0, 0, 0, 0))
     return surface
+surface_monde, camera_x, camera_y = None, None, None
 
 def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
     global batiments, indice
     global players
+    global surface_monde, camera_x, camera_y
     HAUTEUR_BARRE = 100
     LARGEUR_ECRAN, HAUTEUR_ECRAN = ecran.get_size()
     dims = [LARGEUR_ECRAN, HAUTEUR_ECRAN]  # mutable pour mise a jour au resize
