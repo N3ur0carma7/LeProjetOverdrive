@@ -5,7 +5,7 @@ import threading
 from multiplayer.serveur import *
 import multiplayer.client as client_module
 from multiplayer.client import send_list_client, receive_loop, send_batiment_client, send_liste_batiments_client, \
-    send_liste_joueurs_client, CLIENT
+    send_liste_joueurs_client, CLIENT, send_str_client
 from core.Class.batiments import *
 import time
 import random
@@ -18,10 +18,12 @@ connected = 0
 def on_message_recu(TAILLE_CASE):
     global batiments, players, indice, connected
     messageprec = None
-    send_str_server("pos", client_module.CLIENT)
+    send_str_client("pos", client_module.CLIENT)
     while True:
         if client_module.result is not None:
             message, type = client_module.result
+            if connected > len(players) or indice == len(players):
+                new_player(TAILLE_CASE)
             if message != messageprec:
                 if type == "float":
                     connected = message
@@ -32,8 +34,7 @@ def on_message_recu(TAILLE_CASE):
                     batiments = message
                 elif type == "liste_joueurs":
                     players = message
-                if connected > len(players):
-                    new_player(TAILLE_CASE)
+
             messageprec = message
             time.sleep(0.1)
 
@@ -159,6 +160,9 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
     camera_x = players[indice].pos[0] - dims[0] / 2
     camera_y = players[indice].pos[1] - (dims[1] - HAUTEUR_BARRE) / 2
     zoom = 1.0
+    if not dev_mode:
+        update = threading.Thread(target=on_message_recu, args=(TAILLE_CASE,), daemon=True)
+        update.start()
     #tuto
     if is_new_game and not dev_mode:
         def _draw_tuto_background():
@@ -212,9 +216,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
     random.shuffle(ambient_playlist)
     current_playlist_index = 0
     ambient_delay_timer = 0.0
-    if not dev_mode:
-        update = threading.Thread(target=on_message_recu, args=(TAILLE_CASE,), daemon=True)
-        update.start()
+
     while en_cours:
         dt = horloge.tick(FPS) / 1000.0
         save_done_timer = max(0, save_done_timer - dt)
