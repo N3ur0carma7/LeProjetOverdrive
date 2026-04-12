@@ -3,7 +3,8 @@ import random
 import pygame
 import heapq
 import multiplayer.client as client_module
-from multiplayer.client import send_liste_joueurs_client
+
+
 
 _COL_BOUNDS = [(18,71),(88,148),(155,221),(232,294),(306,363),(375,430)]
 _ROW_BOUNDS = [(32,109),(173,251),(305,388),(428,511)]
@@ -109,7 +110,7 @@ class Player:
 
             if current == dest:
                 self.path = self.reconstruire_path(came_from, current)
-                send_liste_joueurs_client(players, client_module.CLIENT)
+                client_module.send_liste_joueurs_client(players, client_module.CLIENT)
                 return True
 
             open_set.remove(current)
