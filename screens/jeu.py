@@ -160,9 +160,12 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
     camera_x = players[indice].pos[0] - dims[0] / 2
     camera_y = players[indice].pos[1] - (dims[1] - HAUTEUR_BARRE) / 2
     zoom = 1.0
-    if not dev_mode:
+
+    if not dev_mode and client_module.CLIENT != None:
+        time.sleep(1)
         update = threading.Thread(target=on_message_recu, args=(TAILLE_CASE,), daemon=True)
         update.start()
+        time.sleep(1)
     #tuto
     if is_new_game and not dev_mode:
         def _draw_tuto_background():
@@ -308,12 +311,9 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
                 else:
                     sx, sy = pygame.mouse.get_pos()
                     case = souris_vers_case((sx, sy), camera_x, camera_y, zoom, TAILLE_CASE)
-
                     if sy < HAUTEUR_ECRAN - HAUTEUR_BARRE:
-                        if not players[indice].a_star(case, TAILLE_CASE):
+                        if not players[indice].a_star(case, TAILLE_CASE, players):
                             print("Chemin bloqué")
-                        if client_module.CLIENT is not None and online:
-                            send_liste_joueurs_client(players, client_module.CLIENT)
 
 
 
