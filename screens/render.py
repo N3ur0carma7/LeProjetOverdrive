@@ -30,8 +30,6 @@ def dessiner_monde(surface_monde, batiments, images_batiments, camera_x, camera_
 
         surface_monde.blit(image_fantome, (x, y))
 
-    player.draw_player(surface_monde, camera_x, camera_y)
-
     for npc in npcs:
         npc.update(dt)
         nx = int(npc.monde_x - camera_x)

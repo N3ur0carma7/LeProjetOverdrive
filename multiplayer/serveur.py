@@ -61,7 +61,9 @@ def str_to_tuple_key(dic):
 def handle_client(client, addr):
     print(f"[NEW CLIENT] {addr} connected\n")
     send_dict_server({"server": "hello client"}, client)
-    send_int_server(number_connected-1, client)
+    for i in clients.keys():
+        send_float_server(float(number_connected), clients[i])
+    send_int_server(number_connected - 1, client)
     if number_connected > 1:
         if jeu.batiments != []:
             payload = [b.to_dict() for b in jeu.batiments]  # message = liste de Batiment

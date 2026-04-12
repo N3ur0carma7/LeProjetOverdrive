@@ -1,4 +1,4 @@
-
+import threading
 
 import pygame
 import time
@@ -8,6 +8,7 @@ from multiplayer.client import send_server, DISCONNECT_MESSAGE, CLIENT, disconne
 from core.Class.buttons import BoutonImage
 from core.Class.player import Player
 from core.saves import save_game
+from screens.jeu import players, indice
 
 save = pygame.image.load("assets/save_done.png")
 
@@ -56,6 +57,7 @@ def menu_pause(ecran, horloge, FPS, buildings, online_data, player: Player, scre
                 if boutons[0].clic():
                     if online_data and CLIENT is not None:
                         disconnect()
+                    players.pop(indice)
                     return "menu"
                 if boutons[1].clic():
                     if not save_game(buildings, player, online_data):
@@ -66,6 +68,7 @@ def menu_pause(ecran, horloge, FPS, buildings, online_data, player: Player, scre
                 if boutons[2].clic():
                     if online_data and CLIENT is not None:
                         disconnect()
+                    players.pop(indice)
                     return False
 
         blurred = pygame.transform.smoothscale(screenshot, (LARGEUR_ECRAN//4, HAUTEUR_ECRAN//4))

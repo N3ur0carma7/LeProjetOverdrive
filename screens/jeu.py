@@ -14,21 +14,25 @@ stop_event = threading.Event()
 batiments = []
 players = []
 indice = 0
-
+connected = 0
 def on_message_recu(TAILLE_CASE):
-    global batiments, players, indice
+    global batiments, players, indice, connected
+    messageprec = None
     while True:
         if client_module.result is not None:
             message, type = client_module.result
-            if type == "int":
-                indice = message
-                if indice >= len(players):
+            if message != messageprec:
+                if type == "float":
+                    connected = message
+                if type == "int":
+                    indice = message
+                if type == "liste_batiments":
+                    batiments = message
+                elif type == "liste_joueurs":
+                    players = message
+                if connected > len(players):
                     new_player(TAILLE_CASE)
-
-            if type == "liste_batiments":
-                batiments = message
-            elif type == "liste_joueurs":
-                players = message
+            messageprec = message
 
 def new_player(TAILLE_CASE):
     global players
@@ -36,6 +40,11 @@ def new_player(TAILLE_CASE):
     # Spawn du joueur au milieu d'une case
     player.pos = (TAILLE_CASE / 2, TAILLE_CASE / 2)
     players.append(player)
+
+def draw_players(surface, camera_x, camera_y):
+    global players
+    for i in players:
+        players[indice].draw_player(surface, camera_x, camera_y)
 
 from core.Class.player import Player
 from core.Class.batiments import Batiment
@@ -121,7 +130,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
     hud_food_img   = pygame.image.load("assets/food.png").convert_alpha()
     hud_vapeur_img = pygame.image.load("assets/vapeur.png").convert_alpha()
     save_done_img = pygame.image.load("assets/save_done.png").convert_alpha()
-    new_player(TAILLE_CASE)
+
     # Dictionnaire des bâtiments placés
     # clé : (x_case, y_case)
     # valeur : index du bâtiment
@@ -130,7 +139,9 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
         if not load_save(batiments, players[indice]):
             print("ERREUR CRITIQUE: Lecture du fichier save/save.json")
             return False
-
+    if is_new_game:
+        players = []
+        new_player(TAILLE_CASE)
     if dev_mode:
         players[indice].money = 5000
         players[indice].food = 5000
@@ -393,6 +404,8 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
         dessiner_grille(surface_monde, camera_x, camera_y, dims, HAUTEUR_BARRE, zoom, herbe, TAILLE_CASE)
 
         dessiner_monde(surface_monde, batiments, images_batiments, camera_x, camera_y, TAILLE_CASE, batiment_selectionne, TYPES_BATIMENTS, players[indice], npcs, image_pnj, dt, zoom)
+
+        draw_players(surface_monde, camera_x, camera_y)
 
         surface_affichee = pygame.transform.scale(
             surface_monde,
