@@ -5,7 +5,7 @@ import threading
 from multiplayer.serveur import *
 import multiplayer.client as client_module
 from multiplayer.client import send_list_client, receive_loop, send_batiment_client, send_liste_batiments_client, \
-    send_liste_joueurs_client
+    send_liste_joueurs_client, CLIENT
 from core.Class.batiments import *
 import time
 import random
@@ -18,6 +18,7 @@ connected = 0
 def on_message_recu(TAILLE_CASE):
     global batiments, players, indice, connected
     messageprec = None
+    send_str_server("pos", client_module.CLIENT)
     while True:
         if client_module.result is not None:
             message, type = client_module.result
@@ -26,6 +27,7 @@ def on_message_recu(TAILLE_CASE):
                     connected = message
                 if type == "int":
                     indice = message
+                    print(indice)
                 if type == "liste_batiments":
                     batiments = message
                 elif type == "liste_joueurs":
@@ -33,6 +35,7 @@ def on_message_recu(TAILLE_CASE):
                 if connected > len(players):
                     new_player(TAILLE_CASE)
             messageprec = message
+            time.sleep(0.1)
 
 def new_player(TAILLE_CASE):
     global players

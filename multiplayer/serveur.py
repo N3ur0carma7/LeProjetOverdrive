@@ -57,13 +57,15 @@ def str_to_tuple_key(dic):
     for k, v in dic.items():
         result[tuple_from_str(k)] = v
     return result
+def pos(client):
+    global clients
+    for i in clients.keys():
+        send_float_server(float(number_connected), clients[i])
+    send_int_server(number_connected - 1, client)
 
 def handle_client(client, addr):
     print(f"[NEW CLIENT] {addr} connected\n")
     send_dict_server({"server": "hello client"}, client)
-    for i in clients.keys():
-        send_float_server(float(number_connected), clients[i])
-    send_int_server(number_connected - 1, client)
     if number_connected > 1:
         if jeu.batiments != []:
             payload = [b.to_dict() for b in jeu.batiments]  # message = liste de Batiment
@@ -76,6 +78,7 @@ def handle_client(client, addr):
                 payload[0]["path"][j] = list(payload[0]["path"][j])
             data = json.dumps({"type": "liste_joueurs", "payload": payload})
             send_client(data, client)
+
     while not stop_event.is_set():
         try:
             msg_len_str = client.recv(HEADER).decode(FORMAT).strip()
@@ -87,6 +90,8 @@ def handle_client(client, addr):
                 break  # ← break au lieu de connected = False
             else:
                 message, type = handle_message_recieved(msg, addr)
+                if type == "str" and message == "pos":
+                    pos(client)
                 for i in clients.keys():
                     if i != addr:
                             if type == "list":
