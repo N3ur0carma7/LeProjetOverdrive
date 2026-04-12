@@ -86,6 +86,8 @@ class Player:
         while current in came_from:
             current = came_from[current]
             chemin.append(current)
+            if client_module.CLIENT is not None:
+                client_module.send_liste_joueurs_client(players, client_module.CLIENT)
         chemin.reverse()
         return chemin
 
@@ -109,9 +111,7 @@ class Player:
             current = min(open_set, key=lambda case: f_score.get(case, float('inf')))
 
             if current == dest:
-                self.path = self.reconstruire_path(came_from, current)
-                if client_module.CLIENT is not None:
-                    client_module.send_liste_joueurs_client(players, client_module.CLIENT)
+                self.path = self.reconstruire_path(came_from, current, players)
                 return True
 
             open_set.remove(current)
