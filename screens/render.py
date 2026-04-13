@@ -40,12 +40,11 @@ def dessiner_monde(surface_monde, batiments, images_batiments, camera_x, camera_
         if -80 < nx < sw + 80 and -80 < ny < sh + 80:
             npc.dessiner_monde(surface_monde, camera_x, camera_y, image_pnj)
 
-def dessiner_hud(ecran, dims, HAUTEUR_BARRE, rects_icones, batiment_selectionne, images_batiments, TYPES_BATIMENTS, TAILLE_ICONE, player, font_argent, hud_or_img, hud_food_img, hud_vapeur_img, save_done_img, save_done_timer):
-    pygame.draw.rect(
-        ecran,
-        (40, 40, 40),
-        (0, dims[1] - HAUTEUR_BARRE, dims[0], HAUTEUR_BARRE)
-    )
+def dessiner_hud(ecran, dims, HAUTEUR_BARRE, rects_icones, batiment_selectionne, images_batiments, TYPES_BATIMENTS, TAILLE_ICONE, player, font_argent, hud_or_img, hud_food_img, hud_vapeur_img, save_done_img, save_done_timer, barre_ouverte=True, slide_offset=0, btn_batiments_rect=None, skill_btn_rect=None):
+    if slide_offset < HAUTEUR_BARRE:
+        barre_surf = pygame.Surface((dims[0], HAUTEUR_BARRE), pygame.SRCALPHA)
+        barre_surf.fill((30, 30, 30, 210))
+        ecran.blit(barre_surf, (0, dims[1] - HAUTEUR_BARRE + slide_offset))
 
     for i, rect in enumerate(rects_icones):
         couleur = (200, 200, 80) if i == batiment_selectionne else (100, 100, 100)
@@ -56,6 +55,43 @@ def dessiner_hud(ecran, dims, HAUTEUR_BARRE, rects_icones, batiment_selectionne,
             images_batiments[type_actuel][1], (TAILLE_ICONE, TAILLE_ICONE)
         )
         ecran.blit(icone, rect)
+
+    # bouton toggle barre bâtiments
+    BTN_SIZE = 80
+    BTN_MARGE = 12
+    btn_x = dims[0] - BTN_SIZE - BTN_MARGE
+    btn_y = dims[1] - BTN_SIZE - BTN_MARGE
+
+    # Fond du bouton : vert = ouvrir, orange = fermer
+    btn_couleur = (160, 90, 30) if barre_ouverte else (40, 140, 40)
+    pygame.draw.rect(ecran, btn_couleur, pygame.Rect(btn_x, btn_y, BTN_SIZE, BTN_SIZE), border_radius=10)
+    pygame.draw.rect(ecran, (220, 220, 180), pygame.Rect(btn_x, btn_y, BTN_SIZE, BTN_SIZE), 3, border_radius=10)
+
+    btn_font = pygame.font.Font("assets/fonts/Minecraft.ttf", 11)
+    label = "CLOSE" if barre_ouverte else "BUILD"
+    lbl_surf = btn_font.render(label, True, (255, 255, 255))
+    lbl_x = btn_x + (BTN_SIZE - lbl_surf.get_width()) // 2
+    lbl_y = btn_y + (BTN_SIZE - lbl_surf.get_height()) // 2
+    ecran.blit(lbl_surf, (lbl_x, lbl_y))
+
+    if btn_batiments_rect is not None:
+        btn_batiments_rect.update(btn_x, btn_y, BTN_SIZE, BTN_SIZE)
+
+    # bouton skill tree
+    skill_btn_x = btn_x - BTN_SIZE - BTN_MARGE
+    skill_btn_y = btn_y
+    skill_btn_couleur = (100, 100, 200)  # Bleu pour skills
+    pygame.draw.rect(ecran, skill_btn_couleur, pygame.Rect(skill_btn_x, skill_btn_y, BTN_SIZE, BTN_SIZE), border_radius=10)
+    pygame.draw.rect(ecran, (220, 220, 180), pygame.Rect(skill_btn_x, skill_btn_y, BTN_SIZE, BTN_SIZE), 3, border_radius=10)
+
+    skill_label = "SKILLS"
+    skill_lbl_surf = btn_font.render(skill_label, True, (255, 255, 255))
+    skill_lbl_x = skill_btn_x + (BTN_SIZE - skill_lbl_surf.get_width()) // 2
+    skill_lbl_y = skill_btn_y + (BTN_SIZE - skill_lbl_surf.get_height()) // 2
+    ecran.blit(skill_lbl_surf, (skill_lbl_x, skill_lbl_y))
+
+    if skill_btn_rect is not None:
+        skill_btn_rect.update(skill_btn_x, skill_btn_y, BTN_SIZE, BTN_SIZE)
 
     # hud ressources
     hud_font = font_argent

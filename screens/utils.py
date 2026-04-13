@@ -12,13 +12,16 @@ def collision(batiments, nouveau):
             return True
     return False
 
-def calculer_rects_icones(dims, HAUTEUR_BARRE, TAILLE_ICONE):
+def calculer_rects_icones(dims, HAUTEUR_BARRE, TAILLE_ICONE, slide_offset=0):
+    """
+    slide_offset : décalage vertical vers le bas (0 = visible, HAUTEUR_BARRE = caché).
+    """
     rects = []
     marge = 20
-    for i in range(4):  # Assuming 4 types
+    for i in range(4):
         rect = pygame.Rect(
             marge + i * (TAILLE_ICONE + marge),
-            dims[1] - HAUTEUR_BARRE + (HAUTEUR_BARRE - TAILLE_ICONE) // 2,
+            dims[1] - HAUTEUR_BARRE + (HAUTEUR_BARRE - TAILLE_ICONE) // 2 + slide_offset,
             TAILLE_ICONE,
             TAILLE_ICONE
         )

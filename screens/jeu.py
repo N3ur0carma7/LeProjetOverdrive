@@ -46,15 +46,14 @@ from screens.GUI.menu_amelioration import afficher_menu_amelioration
 import core.sounds as sound
 from screens.tutorial import run_tutorial
 from screens.terminal import Terminal
-
+#patch pour la farm et autres
 def corriger_transparence(surface):
-    """Corrige les pixels semi-transparents en les rendant complètement transparents"""
     width, height = surface.get_size()
     for x in range(width):
         for y in range(height):
             color = surface.get_at((x, y))
-            if color.a < 20:  # Seuil d'alpha faible
-                surface.set_at((x, y), (0, 0, 0, 0))  # Complètement transparent
+            if color.a < 20:
+                surface.set_at((x, y), (0, 0, 0, 0))
     return surface
 
 def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
@@ -168,6 +167,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
             return False
 
     batiment_selectionne = None
+    unlocked_skills = set()
 
     terminal = Terminal()
 
@@ -178,7 +178,14 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
     deplacement_camera = False
     derniere_souris = (0, 0)
 
-    rects_icones = calculer_rects_icones(dims, HAUTEUR_BARRE, TAILLE_ICONE)
+    # booléen pour savoir si la barre de bâtiments est ouverte ou fermée
+    barre_ouverte = False
+    SLIDE_SPEED = 400
+    slide_offset = HAUTEUR_BARRE
+    btn_batiments_rect = pygame.Rect(0, 0, 60, 60)
+    skill_btn_rect = pygame.Rect(0, 0, 60, 60)
+
+    rects_icones = calculer_rects_icones(dims, HAUTEUR_BARRE, TAILLE_ICONE, slide_offset)
     en_cours = True
     acc_argent   = 0.0  # mine → money
     acc_food     = 0.0  # farm → food
@@ -193,6 +200,14 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
     while en_cours:
         dt = horloge.tick(FPS) / 1000.0
         save_done_timer = max(0, save_done_timer - dt)
+
+        # animation d'ouverture/fermeture de la barre de batiments
+        cible_offset = 0 if barre_ouverte else HAUTEUR_BARRE
+        if slide_offset < cible_offset:
+            slide_offset = min(cible_offset, slide_offset + SLIDE_SPEED * dt)
+        elif slide_offset > cible_offset:
+            slide_offset = max(cible_offset, slide_offset - SLIDE_SPEED * dt)
+        rects_icones[:] = calculer_rects_icones(dims, HAUTEUR_BARRE, TAILLE_ICONE, int(slide_offset))
 
         if not pygame.mixer.music.get_busy():
             if ambient_delay_timer > 0:
@@ -217,17 +232,15 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
 
             if event.type == pygame.VIDEORESIZE:
                 dims[0], dims[1] = event.w, event.h
-                rects_icones[:] = calculer_rects_icones(dims, HAUTEUR_BARRE, TAILLE_ICONE)
+                rects_icones[:] = calculer_rects_icones(dims, HAUTEUR_BARRE, TAILLE_ICONE, int(slide_offset))
 
-            # ── Terminal : touche ² pour ouvrir/fermer ──────────────────────
+            # terminal toggle
             if event.type == pygame.KEYDOWN and event.unicode == "²":
                 terminal.toggle()
                 continue
 
-            # Si le terminal est ouvert, il consomme tous les events clavier/souris
             if terminal.handle_event(event, player, batiments):
                 continue
-            # ───────────────────────────────────────────────────────────────
 
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 from screens.pause import menu_pause
@@ -251,11 +264,11 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
                 zoom += event.y * VITESSE_ZOOM
                 zoom = max(ZOOM_MIN, min(ZOOM_MAX, zoom))
 
-                centre_x = camera_x + dims[0] / (2 * ancien_zoom)
-                centre_y = camera_y + dims[1] / (2 * ancien_zoom)
-
-                camera_x = centre_x - dims[0] / (2 * zoom)
-                camera_y = centre_y - dims[1] / (2 * zoom)
+                sx, sy = pygame.mouse.get_pos()
+                souris_monde_x = camera_x + sx / ancien_zoom
+                souris_monde_y = camera_y + sy / ancien_zoom
+                camera_x = souris_monde_x - sx / zoom
+                camera_y = souris_monde_y - sy / zoom
 
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 2:
                 deplacement_camera = True
@@ -291,12 +304,25 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 sx, sy = pygame.mouse.get_pos()
 
+                if btn_batiments_rect.collidepoint(sx, sy):
+                    barre_ouverte = not barre_ouverte
+                    if not barre_ouverte:
+                        batiment_selectionne = None
+                    continue
+
+                if skill_btn_rect.collidepoint(sx, sy):
+                    from screens.skill_tree import afficher_skill_tree
+                    unlocked_skills = afficher_skill_tree(ecran, player, unlocked_skills, Batiment.DATA)
+                    continue
+
                 clic_barre = False
-                for i, rect in enumerate(rects_icones):
-                    if rect.collidepoint(sx, sy):
-                        batiment_selectionne = None if batiment_selectionne == i else i
-                        clic_barre = True
-                        break
+                # N'autoriser le clic sur les icones que si la barre est visible
+                if barre_ouverte and slide_offset < HAUTEUR_BARRE:
+                    for i, rect in enumerate(rects_icones):
+                        if rect.collidepoint(sx, sy):
+                            batiment_selectionne = None if batiment_selectionne == i else i
+                            clic_barre = True
+                            break
 
 
                 # Placement du bâtiment sur la grille
@@ -373,25 +399,25 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
         ecran.fill((0, 0, 0))
 
         largeur_vue = dims[0] / zoom
-        hauteur_vue = (dims[1] - HAUTEUR_BARRE) / zoom
+        hauteur_vue = dims[1] / zoom
 
         surface_monde = pygame.Surface(
             (math.ceil(largeur_vue), math.ceil(hauteur_vue))
         ).convert()
 
-        dessiner_grille(surface_monde, camera_x, camera_y, dims, HAUTEUR_BARRE, zoom, herbe, TAILLE_CASE)
+        dessiner_grille(surface_monde, camera_x, camera_y, dims, 0, zoom, herbe, TAILLE_CASE)
 
         dessiner_monde(surface_monde, batiments, images_batiments, camera_x, camera_y, TAILLE_CASE, batiment_selectionne, TYPES_BATIMENTS, player, npcs, image_pnj, dt, zoom)
 
         surface_affichee = pygame.transform.scale(
             surface_monde,
-            (dims[0], dims[1] - HAUTEUR_BARRE)
+            (dims[0], dims[1])
         )
 
         ecran.blit(surface_affichee, (0, 0))
-        dessiner_grille_overlay(ecran, camera_x, camera_y, dims, HAUTEUR_BARRE, zoom, TAILLE_CASE)
+        dessiner_grille_overlay(ecran, camera_x, camera_y, dims, 0, zoom, TAILLE_CASE)
 
-        dessiner_hud(ecran, dims, HAUTEUR_BARRE, rects_icones, batiment_selectionne, images_batiments, TYPES_BATIMENTS, TAILLE_ICONE, player, font_argent, hud_or_img, hud_food_img, hud_vapeur_img, save_done_img, save_done_timer)
+        dessiner_hud(ecran, dims, HAUTEUR_BARRE, rects_icones, batiment_selectionne, images_batiments, TYPES_BATIMENTS, TAILLE_ICONE, player, font_argent, hud_or_img, hud_food_img, hud_vapeur_img, save_done_img, save_done_timer, barre_ouverte, int(slide_offset), btn_batiments_rect, skill_btn_rect)
 
         terminal.draw(ecran, dt)
 
