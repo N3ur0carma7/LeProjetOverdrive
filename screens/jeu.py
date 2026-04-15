@@ -36,6 +36,8 @@ def on_message_recu(TAILLE_CASE):
                         elif type == "liste_joueurs":
                             players = message
                             print(players)
+                            for player in players:
+                                player.update_anim(dt, players)
                     messageprec = message
                     time.sleep(0.1)
         except Exception as e:
