@@ -25,8 +25,6 @@ def on_message_recu(TAILLE_CASE):
             while True:
                 if client_module.result is not None:
                     message, type = client_module.result
-                    if connected > len(players) or indice == len(players):
-                        new_player(TAILLE_CASE)
                     if message != messageprec:
                         if type == "float":
                             connected = message
@@ -89,10 +87,10 @@ def corriger_transparence(surface):
                 surface.set_at((x, y), (0, 0, 0, 0))
     return surface
 surface_monde, camera_x, camera_y = None, None, None
-
+TAILLE_CASE = None
 def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
     global batiments, indice
-    global players
+    global players, TAILLE_CASE
     global surface_monde, camera_x, camera_y, dt
     HAUTEUR_BARRE = 100
     LARGEUR_ECRAN, HAUTEUR_ECRAN = ecran.get_size()
@@ -136,7 +134,11 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
     TAILLE_ICONE = 64
     batiments = []
     npcs = []
-
+    if not dev_mode and client_module.CLIENT != None:
+        time.sleep(1)
+        update = threading.Thread(target=on_message_recu, args=(TAILLE_CASE,), daemon=True)
+        update.start()
+        time.sleep(1)
 
     image_pnj = pygame.image.load("assets/pnj.png").convert_alpha()
     font_argent = pygame.font.Font("assets/fonts/Minecraft.ttf", 15)
@@ -153,9 +155,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
         if not load_save(batiments, players[indice]):
             print("ERREUR CRITIQUE: Lecture du fichier save/save.json")
             return False
-    if is_new_game:
-        players = []
-        new_player(TAILLE_CASE)
+
     if dev_mode:
         players[indice].money = 5000
         players[indice].food = 5000
@@ -168,11 +168,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
     camera_y = players[indice].pos[1] - (dims[1] - HAUTEUR_BARRE) / 2
     zoom = 1.0
 
-    if not dev_mode and client_module.CLIENT != None:
-        time.sleep(1)
-        update = threading.Thread(target=on_message_recu, args=(TAILLE_CASE,), daemon=True)
-        update.start()
-        time.sleep(1)
+
     #tuto
     if is_new_game and not dev_mode:
         def _draw_tuto_background():
