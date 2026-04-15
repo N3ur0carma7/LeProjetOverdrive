@@ -63,28 +63,13 @@ def pos(client):
     for i in clients.keys():
         send_float_server(float(number_connected), clients[i])
     send_int_server(number_connected - 1, client)
-    if number_connected > 1:
-        for sujet2 in clients.keys():
-            if jeu.batiments != []:
-                payload = [b.to_dict() for b in jeu.batiments]  # message = liste de Batiment
-                data = json.dumps({"type": "liste_batiments", "payload": payload})
-                send_client(data, clients[sujet2])
-    if jeu.TAILLE_CASE is not None:
-        player = Player()
-        player.pos = (jeu.TAILLE_CASE / 2, jeu.TAILLE_CASE / 2)
-        jeu.players.append(player)
-    for sujet in clients.keys():
-        payload = [p.to_dict() for p in jeu.players]
-        payload[0]["pos"] = list(payload[0]["pos"])
-        for j in range(len(payload[0]["path"])):
-            payload[0]["path"][j] = list(payload[0]["path"][j])
-        data = json.dumps({"type": "liste_joueurs", "payload": payload})
-        send_client(data, clients[sujet])
+
 
 def handle_client(client, addr):
     global clients
     print(f"[NEW CLIENT] {addr} connected\n")
     send_dict_server({"server": "hello client"}, client)
+
     while not stop_event.is_set():
         try:
             msg_len_str = client.recv(HEADER).decode(FORMAT).strip()
@@ -98,6 +83,23 @@ def handle_client(client, addr):
                 message, type = handle_message_recieved(msg, addr)
                 if type == "str" and message == "pos":
                     pos(client)
+                    if number_connected > 1:
+                        for sujet2 in clients.keys():
+                            if jeu.batiments != []:
+                                payload = [b.to_dict() for b in jeu.batiments]  # message = liste de Batiment
+                                data = json.dumps({"type": "liste_batiments", "payload": payload})
+                                send_client(data, clients[sujet2])
+                    if jeu.TAILLE_CASE is not None:
+                        player = Player()
+                        player.pos = (jeu.TAILLE_CASE / 2, jeu.TAILLE_CASE / 2)
+                        jeu.players.append(player)
+                    for sujet in clients.keys():
+                        payload = [p.to_dict() for p in jeu.players]
+                        payload[0]["pos"] = list(payload[0]["pos"])
+                        for j in range(len(payload[0]["path"])):
+                            payload[0]["path"][j] = list(payload[0]["path"][j])
+                        data = json.dumps({"type": "liste_joueurs", "payload": payload})
+                        send_client(data, clients[sujet])
                 for i in clients.keys():
                     if i != addr:
                             if type == "list":
