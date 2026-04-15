@@ -69,10 +69,11 @@ def handle_client(client, addr):
     print(f"[NEW CLIENT] {addr} connected\n")
     send_dict_server({"server": "hello client"}, client)
     if number_connected > 1:
-        if jeu.batiments != []:
-            payload = [b.to_dict() for b in jeu.batiments]  # message = liste de Batiment
-            data = json.dumps({"type": "liste_batiments", "payload": payload})
-            send_client(data, client)
+        for sujet2 in clients.keys():
+            if jeu.batiments != []:
+                payload = [b.to_dict() for b in jeu.batiments]  # message = liste de Batiment
+                data = json.dumps({"type": "liste_batiments", "payload": payload})
+                send_client(data, clients[sujet2])
     if jeu.TAILLE_CASE is not None:
         player = Player()
         player.pos = (jeu.TAILLE_CASE / 2, jeu.TAILLE_CASE / 2)
@@ -133,8 +134,7 @@ def handle_client(client, addr):
                                 send_client(data, clients[i])
 
         except Exception as e:
-            print("oups")
-            break
+            pass
     if addr in clients:
         del clients[addr]
     disconnect(client)
