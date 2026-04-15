@@ -139,7 +139,7 @@ class Player:
                 f_score[voisin] = g_score[voisin] + self.heuristique(voisin, dest)
         return False
 
-    def update(self, taille_case: int, players, dt: float = 1/60):
+    def update(self, taille_case: int, dt: float = 1/60):
         """Met à jour la position du joueur.
         dt : delta time en secondes (indépendant des FPS).
         """
@@ -169,11 +169,6 @@ class Player:
 
         if distance < step:
             self.pos = (target_x, target_y)
-            try:
-                if client_module.CLIENT is not None:
-                    client_module.send_liste_joueurs_client(players, client_module.CLIENT)
-            except Exception as e:
-                pass
             self.path.pop(0)
             if not self.path:
                 self.is_moving = False
@@ -186,12 +181,17 @@ class Player:
         dy /= distance
         self.pos = (self.pos[0] + dx * step, self.pos[1] + dy * step)
 
-    def update_anim(self, dt: float):
+    def update_anim(self, dt: float, players):
         if self.is_moving:
             self.anim_timer += dt
             if self.anim_timer >= 1.0 / self.anim_fps:
                 self.anim_timer = 0.0
                 self.anim_frame = (self.anim_frame + 1) % len(_COL_BOUNDS)
+            try:
+                if client_module.CLIENT is not None:
+                    client_module.send_liste_joueurs_client(players, client_module.CLIENT)
+            except Exception as e:
+                pass
         else:
             #idle
             self.anim_frame = 0

@@ -315,7 +315,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
                     sx, sy = pygame.mouse.get_pos()
                     case = souris_vers_case((sx, sy), camera_x, camera_y, zoom, TAILLE_CASE)
                     if sy < HAUTEUR_ECRAN - HAUTEUR_BARRE:
-                        if not players[indice].a_star(case, TAILLE_CASE, players):
+                        if not players[indice].a_star(case, TAILLE_CASE):
                             print("Chemin bloqué")
 
 
@@ -400,8 +400,8 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
                 mode_sell = False
 
 
-        players[indice].update(TAILLE_CASE, players, dt)
-        players[indice].update_anim(dt)
+        players[indice].update(TAILLE_CASE, dt)
+        players[indice].update_anim(dt, players)
 
         ecran.fill((0, 0, 0))
 
