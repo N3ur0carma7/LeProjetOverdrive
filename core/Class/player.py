@@ -79,22 +79,17 @@ class Player:
         # Calcule la distance heuristique
         return abs(start[0] - dest[0]) + abs(start[1] - dest[1])
 
-    def reconstruire_path(self, came_from, current, players):
+    def reconstruire_path(self, came_from, current):
 
         chemin = [current]
 
         while current in came_from:
             current = came_from[current]
             chemin.append(current)
-            try:
-                if client_module.CLIENT is not None:
-                    client_module.send_liste_joueurs_client(players, client_module.CLIENT)
-            except Exception as e:
-                pass
         chemin.reverse()
         return chemin
 
-    def a_star(self, dest: tuple, taille_case: int, players):
+    def a_star(self, dest: tuple, taille_case: int):
         # Calcule le chemin avec A*
         start = (
             int(self.pos[0] // taille_case),
@@ -114,7 +109,7 @@ class Player:
             current = min(open_set, key=lambda case: f_score.get(case, float('inf')))
 
             if current == dest:
-                self.path = self.reconstruire_path(came_from, current, players)
+                self.path = self.reconstruire_path(came_from, current)
                 return True
 
             open_set.remove(current)
@@ -144,7 +139,7 @@ class Player:
                 f_score[voisin] = g_score[voisin] + self.heuristique(voisin, dest)
         return False
 
-    def update(self, taille_case: int, dt: float = 1/60):
+    def update(self, taille_case: int, players, dt: float = 1/60):
         """Met à jour la position du joueur.
         dt : delta time en secondes (indépendant des FPS).
         """
@@ -174,6 +169,11 @@ class Player:
 
         if distance < step:
             self.pos = (target_x, target_y)
+            try:
+                if client_module.CLIENT is not None:
+                    client_module.send_liste_joueurs_client(players, client_module.CLIENT)
+            except Exception as e:
+                pass
             self.path.pop(0)
             if not self.path:
                 self.is_moving = False

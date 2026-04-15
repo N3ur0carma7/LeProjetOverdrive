@@ -73,17 +73,17 @@ def handle_client(client, addr):
             payload = [b.to_dict() for b in jeu.batiments]  # message = liste de Batiment
             data = json.dumps({"type": "liste_batiments", "payload": payload})
             send_client(data, client)
+    if jeu.TAILLE_CASE is not None:
+        player = Player()
+        player.pos = (jeu.TAILLE_CASE / 2, jeu.TAILLE_CASE / 2)
+        jeu.players.append(player)
     for sujet in clients.keys():
-        if jeu.TAILLE_CASE is not None:
-            player = Player()
-            player.pos = (jeu.TAILLE_CASE / 2, jeu.TAILLE_CASE / 2)
-            jeu.players.append(player)
-            payload = [p.to_dict() for p in jeu.players]
-            payload[0]["pos"] = list(payload[0]["pos"])
-            for j in range(len(payload[0]["path"])):
-                payload[0]["path"][j] = list(payload[0]["path"][j])
-            data = json.dumps({"type": "liste_joueurs", "payload": payload})
-            send_client(data, clients[sujet])
+        payload = [p.to_dict() for p in jeu.players]
+        payload[0]["pos"] = list(payload[0]["pos"])
+        for j in range(len(payload[0]["path"])):
+            payload[0]["path"][j] = list(payload[0]["path"][j])
+        data = json.dumps({"type": "liste_joueurs", "payload": payload})
+        send_client(data, clients[sujet])
 
     while not stop_event.is_set():
         try:
@@ -208,8 +208,9 @@ def handle_message_recieved (msg, addr):
 def disconnect (client):
     global clients, clients_indice
     print(f"[STOP] client disconnected")
+    print(clients_indice[client])
+    jeu.players.pop(clients_indice[client])
     for sujet in clients.keys():
-        jeu.players.pop(clients_indice[client])
         payload = [p.to_dict() for p in jeu.players]
         payload[0]["pos"] = list(payload[0]["pos"])
         for j in range(len(payload[0]["path"])):
@@ -297,7 +298,7 @@ def start(server):
         except OSError:
             break
         clients[addr] = client
-        clients_indice[addr] = number_connected-1
+        clients_indice[client] = number_connected
         number_connected = len(clients)
         print(f"[ACTIVE CLIENTS] {number_connected}\n")
         client_thread = threading.Thread(target=handle_client, args=(client, addr))

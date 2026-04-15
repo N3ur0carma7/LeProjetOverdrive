@@ -35,6 +35,7 @@ def on_message_recu(TAILLE_CASE):
                             batiments = message
                         elif type == "liste_joueurs":
                             players = message
+                            print(players)
                     messageprec = message
                     time.sleep(0.1)
         except Exception as e:
@@ -54,7 +55,6 @@ def draw_players(surface, camera_x, camera_y):
         for player in players:
             player.draw_player(surface, camera_x, camera_y)
             nuber = nuber + 1
-            print(nuber, players)
 
 from core.Class.player import Player
 from core.Class.batiments import Batiment
@@ -400,7 +400,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
                 mode_sell = False
 
 
-        players[indice].update(TAILLE_CASE, dt)
+        players[indice].update(TAILLE_CASE, players, dt)
         players[indice].update_anim(dt)
 
         ecran.fill((0, 0, 0))
