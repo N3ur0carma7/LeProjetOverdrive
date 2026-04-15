@@ -79,15 +79,18 @@ class Player:
         # Calcule la distance heuristique
         return abs(start[0] - dest[0]) + abs(start[1] - dest[1])
 
-    def reconstruire_path(self, came_from, current):
+    def reconstruire_path(self, came_from, current, players):
 
         chemin = [current]
 
         while current in came_from:
             current = came_from[current]
             chemin.append(current)
-            if client_module.CLIENT is not None:
-                client_module.send_liste_joueurs_client(players, client_module.CLIENT)
+            try:
+                if client_module.CLIENT is not None:
+                    client_module.send_liste_joueurs_client(players, client_module.CLIENT)
+            except Exception as e:
+                pass
         chemin.reverse()
         return chemin
 

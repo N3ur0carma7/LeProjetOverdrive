@@ -19,31 +19,28 @@ dt = 0.0
 def on_message_recu(TAILLE_CASE):
     global batiments, players, indice, connected
     messageprec = None
-    is_connected = True
-    while is_connected:
-        send_str_client("pos", client_module.CLIENT)
-        while True:
-            if client_module.result is not None:
-                message, type = client_module.result
-                if connected > len(players) or indice == len(players):
-                    new_player(TAILLE_CASE)
-                if message != messageprec:
-                    if type == "float":
-                        connected = message
-                    if type == "int":
-                        indice = message
-                        print(indice)
-                    if type == "liste_batiments":
-                        batiments = message
-                    elif type == "liste_joueurs":
-                        if message != players:
-                            for player in players:
-                                player.update(TAILLE_CASE, dt)
-                                player.update_anim(dt)
-                        players = message
-
-                messageprec = message
-                time.sleep(0.1)
+    while True:
+        try:
+            send_str_client("pos", client_module.CLIENT)
+            while True:
+                if client_module.result is not None:
+                    message, type = client_module.result
+                    if connected > len(players) or indice == len(players):
+                        new_player(TAILLE_CASE)
+                    if message != messageprec:
+                        if type == "float":
+                            connected = message
+                        if type == "int":
+                            indice = message
+                            print(indice)
+                        if type == "liste_batiments":
+                            batiments = message
+                        elif type == "liste_joueurs":
+                            players = message
+                    messageprec = message
+                    time.sleep(0.1)
+        except Exception as e:
+            pass
 
 def new_player(TAILLE_CASE):
     global players
@@ -54,9 +51,12 @@ def new_player(TAILLE_CASE):
 
 def draw_players(surface, camera_x, camera_y):
     global players
+    nuber = 0
     if surface and camera_x and camera_y is not None:
         for player in players:
             player.draw_player(surface, camera_x, camera_y)
+            nuber = nuber + 1
+            print(nuber, players)
 
 from core.Class.player import Player
 from core.Class.batiments import Batiment
