@@ -58,7 +58,6 @@ def menu_pause(ecran, horloge, FPS, buildings, online_data, player: Player, scre
                 if boutons[0].clic():
                     if online_data and CLIENT is not None:
                         disconnect()
-                        players.pop(indice)
                         try:
                             if client_module.CLIENT is not None:
                                 client_module.send_liste_joueurs_client(players, client_module.CLIENT)
@@ -74,7 +73,6 @@ def menu_pause(ecran, horloge, FPS, buildings, online_data, player: Player, scre
                 if boutons[2].clic():
                     if online_data and CLIENT is not None:
                         disconnect()
-                        players.pop(indice)
                         try:
                             if client_module.CLIENT is not None:
                                 client_module.send_liste_joueurs_client(players, client_module.CLIENT)
