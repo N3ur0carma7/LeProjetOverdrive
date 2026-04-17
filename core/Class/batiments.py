@@ -1,11 +1,11 @@
 import pygame
+from core.Class.skill_levels import get_max_level
 
 class Batiment:
     TYPE_RESIDENTIEL = "residentiel"
     TYPE_GENERATEUR  = "generateur"
     TYPE_MINE        = "mine"
     TYPE_FARM        = "farm"
-
     DATA = {
         TYPE_RESIDENTIEL: {
             1: {"population": 1, "cout": 125},
@@ -69,30 +69,36 @@ class Batiment:
         return stats.get("population", 0)
 
     def get_upgrade_cost(self):
-        if self.niveau >= 3:
+        """Returns the cost to reach the next level, or None if at cap or max."""
+        cap = get_max_level(self.type)
+        if self.niveau >= cap or self.niveau >= 3:
             return None
         return Batiment.DATA[self.type][self.niveau + 1]["cout"]
 
     def upgrade(self):
-        if self.niveau < 3:
+        """Upgrade by one level, respecting the skill-tree cap."""
+        cap = get_max_level(self.type)
+        if self.niveau < cap and self.niveau < 3:
             self.niveau += 1
 
     def est_max_level(self):
-        return self.niveau >= 3
+        """True if the building is at the current allowed cap (or absolute max)."""
+        cap = get_max_level(self.type)
+        return self.niveau >= cap or self.niveau >= 3
 
     def collision(self, autre):
         return not (
-                self.x + self.largeur < autre.x or
-                self.x > autre.x + autre.largeur or
-                self.y + self.hauteur < autre.y or
-                self.y > autre.y + autre.hauteur
+            self.x + self.largeur < autre.x or
+            self.x > autre.x + autre.largeur or
+            self.y + self.hauteur < autre.y or
+            self.y > autre.y + autre.hauteur
         )
 
     def __str__(self):
         return f"{self.type} (niveau {self.niveau})"
 
-    #pour convertir pour le serveur
-    #PAS TOUCHE !!!
+    # pour convertir pour le serveur
+    # PAS TOUCHE !!!
     # SINON AU BUCHER !!!!
     def to_dict(self):
         return {
@@ -110,5 +116,4 @@ class Batiment:
         obj.niveau = d.get("niveau", 1)
         obj.largeur = d.get("largeur", 175)
         obj.hauteur = d.get("hauteur", 175)
-
         return obj

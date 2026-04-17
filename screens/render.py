@@ -2,7 +2,7 @@ import pygame
 import math
 from screens.utils import collision, souris_vers_case, joueur_a_portee
 
-def dessiner_monde(surface_monde, batiments, images_batiments, camera_x, camera_y, TAILLE_CASE, batiment_selectionne, TYPES_BATIMENTS, player, npcs, image_pnj, dt, zoom):
+def dessiner_monde(surface_monde, batiments, images_batiments, camera_x, camera_y, TAILLE_CASE, batiment_selectionne, TYPES_BATIMENTS, player, npcs, image_pnj, dt, zoom, raid_manager=None):
     from screens.utils import collision, souris_vers_case, joueur_a_portee
     from core.Class.batiments import Batiment
 
@@ -30,6 +30,9 @@ def dessiner_monde(surface_monde, batiments, images_batiments, camera_x, camera_
 
         surface_monde.blit(image_fantome, (x, y))
 
+    player.draw_player(surface_monde, camera_x, camera_y)
+
+
     for npc in npcs:
         npc.update(dt)
         nx = int(npc.monde_x - camera_x)
@@ -38,12 +41,15 @@ def dessiner_monde(surface_monde, batiments, images_batiments, camera_x, camera_
         if -80 < nx < sw + 80 and -80 < ny < sh + 80:
             npc.dessiner_monde(surface_monde, camera_x, camera_y, image_pnj)
 
-def dessiner_hud(ecran, dims, HAUTEUR_BARRE, rects_icones, batiment_selectionne, images_batiments, TYPES_BATIMENTS, TAILLE_ICONE, player, font_argent, hud_or_img, hud_food_img, hud_vapeur_img, save_done_img, save_done_timer):
-    pygame.draw.rect(
-        ecran,
-        (40, 40, 40),
-        (0, dims[1] - HAUTEUR_BARRE, dims[0], HAUTEUR_BARRE)
-    )
+    # Monstres PVE
+    if raid_manager is not None:
+        raid_manager.draw(surface_monde, camera_x, camera_y)
+
+def dessiner_hud(ecran, dims, HAUTEUR_BARRE, rects_icones, batiment_selectionne, images_batiments, TYPES_BATIMENTS, TAILLE_ICONE, player, font_argent, hud_or_img, hud_food_img, hud_vapeur_img, save_done_img, save_done_timer, barre_ouverte=True, slide_offset=0, btn_batiments_rect=None, skill_btn_rect=None, raid_manager=None):
+    if slide_offset < HAUTEUR_BARRE:
+        barre_surf = pygame.Surface((dims[0], HAUTEUR_BARRE), pygame.SRCALPHA)
+        barre_surf.fill((30, 30, 30, 210))
+        ecran.blit(barre_surf, (0, dims[1] - HAUTEUR_BARRE + slide_offset))
 
     for i, rect in enumerate(rects_icones):
         couleur = (200, 200, 80) if i == batiment_selectionne else (100, 100, 100)
@@ -54,6 +60,43 @@ def dessiner_hud(ecran, dims, HAUTEUR_BARRE, rects_icones, batiment_selectionne,
             images_batiments[type_actuel][1], (TAILLE_ICONE, TAILLE_ICONE)
         )
         ecran.blit(icone, rect)
+
+    # bouton toggle barre bâtiments
+    BTN_SIZE = 80
+    BTN_MARGE = 12
+    btn_x = dims[0] - BTN_SIZE - BTN_MARGE
+    btn_y = dims[1] - BTN_SIZE - BTN_MARGE
+
+    # Fond du bouton : vert = ouvrir, orange = fermer
+    btn_couleur = (160, 90, 30) if barre_ouverte else (40, 140, 40)
+    pygame.draw.rect(ecran, btn_couleur, pygame.Rect(btn_x, btn_y, BTN_SIZE, BTN_SIZE), border_radius=10)
+    pygame.draw.rect(ecran, (220, 220, 180), pygame.Rect(btn_x, btn_y, BTN_SIZE, BTN_SIZE), 3, border_radius=10)
+
+    btn_font = pygame.font.Font("assets/fonts/Minecraft.ttf", 11)
+    label = "CLOSE" if barre_ouverte else "BUILD"
+    lbl_surf = btn_font.render(label, True, (255, 255, 255))
+    lbl_x = btn_x + (BTN_SIZE - lbl_surf.get_width()) // 2
+    lbl_y = btn_y + (BTN_SIZE - lbl_surf.get_height()) // 2
+    ecran.blit(lbl_surf, (lbl_x, lbl_y))
+
+    if btn_batiments_rect is not None:
+        btn_batiments_rect.update(btn_x, btn_y, BTN_SIZE, BTN_SIZE)
+
+    # bouton skill tree
+    skill_btn_x = btn_x - BTN_SIZE - BTN_MARGE
+    skill_btn_y = btn_y
+    skill_btn_couleur = (100, 100, 200)  # Bleu pour skills
+    pygame.draw.rect(ecran, skill_btn_couleur, pygame.Rect(skill_btn_x, skill_btn_y, BTN_SIZE, BTN_SIZE), border_radius=10)
+    pygame.draw.rect(ecran, (220, 220, 180), pygame.Rect(skill_btn_x, skill_btn_y, BTN_SIZE, BTN_SIZE), 3, border_radius=10)
+
+    skill_label = "SKILLS"
+    skill_lbl_surf = btn_font.render(skill_label, True, (255, 255, 255))
+    skill_lbl_x = skill_btn_x + (BTN_SIZE - skill_lbl_surf.get_width()) // 2
+    skill_lbl_y = skill_btn_y + (BTN_SIZE - skill_lbl_surf.get_height()) // 2
+    ecran.blit(skill_lbl_surf, (skill_lbl_x, skill_lbl_y))
+
+    if skill_btn_rect is not None:
+        skill_btn_rect.update(skill_btn_x, skill_btn_y, BTN_SIZE, BTN_SIZE)
 
     # hud ressources
     hud_font = font_argent
@@ -80,3 +123,35 @@ def dessiner_hud(ecran, dims, HAUTEUR_BARRE, rects_icones, batiment_selectionne,
         x = 10
         y = 10
         ecran.blit(save_done_img, (x, y))
+
+    # barre de vie du joueur
+    hp_bar_w = 200
+    hp_bar_h = 14
+    hp_bar_x = 12
+    hp_bar_y = 20
+    hp_ratio = max(0.0, player.hp / player.hp_max)
+    # fond
+    pygame.draw.rect(ecran, (60, 10, 10), (hp_bar_x, hp_bar_y, hp_bar_w, hp_bar_h), border_radius=4)
+    # vie
+    if hp_ratio > 0:
+        bar_color = (200, 0, 0) if hp_ratio > 0.5 else (220, 180, 30) if hp_ratio > 0.25 else (220, 50, 50)
+        pygame.draw.rect(ecran, bar_color, (hp_bar_x, hp_bar_y, int(hp_bar_w * hp_ratio), hp_bar_h), border_radius=4)
+    # contour
+    pygame.draw.rect(ecran, (180, 180, 180), (hp_bar_x, hp_bar_y, hp_bar_w, hp_bar_h), 1, border_radius=4)
+    hp_font = font_argent
+    hp_txt = hp_font.render(f"HP {int(player.hp)}/{player.hp_max}", True, (255, 255, 255))
+    ecran.blit(hp_txt, (hp_bar_x + 4, hp_bar_y - hp_txt.get_height() - 2))
+
+    # --- Indicateur de raid actif ---
+    if raid_manager is not None and raid_manager._raid_active:
+        raid_font = font_argent
+        nb_monstres = len(raid_manager.monsters)
+        wave_txt = f"RAID  Vague {raid_manager._wave_index}/{raid_manager.WAVES_PER_RAID}  Monstres: {nb_monstres}"
+        raid_surf = raid_font.render(wave_txt, True, (255, 80, 80))
+        rx = dims[0] // 2 - raid_surf.get_width() // 2
+        ry = 6
+        # fond semi-transparent
+        bg = pygame.Surface((raid_surf.get_width() + 16, raid_surf.get_height() + 8), pygame.SRCALPHA)
+        bg.fill((0, 0, 0, 160))
+        ecran.blit(bg, (rx - 8, ry - 4))
+        ecran.blit(raid_surf, (rx, ry))
