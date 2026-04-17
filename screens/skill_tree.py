@@ -116,6 +116,17 @@ SKILLS_DATA = {
                 "max_level": 3,
                 "pos": (0.13, 0.80),
             },
+            {
+                "id": "building_upgrade_residential_3",
+                "name": "Maison Niv.3",
+                "description": "Permet de construire des maisons niveau 3.",
+                "cost": 300,
+                "prerequisites": ["building_upgrade_residential_2"],
+                "effect": "unlock_building_upgrade",
+                "building_type": Batiment.TYPE_RESIDENTIEL,
+                "max_level": 3,
+                "pos": (0.35, 0.25),
+            },
 
             # ADVANCED
             {

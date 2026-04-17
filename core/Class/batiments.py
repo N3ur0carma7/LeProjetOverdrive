@@ -29,6 +29,9 @@ class Batiment:
         },
     }
 
+    # Footprint en "petites cases" (style COC) : 3x3 par défaut
+    DEFAULT_FOOTPRINT = 3
+
     def __init__(self, type_batiment, x, y):
         if type_batiment not in Batiment.DATA:
             raise ValueError("Type de batiment invalide")
@@ -36,8 +39,8 @@ class Batiment:
         self.niveau = 1
         self.x = x
         self.y = y
-        self.largeur = 1
-        self.hauteur = 1
+        self.largeur = Batiment.DEFAULT_FOOTPRINT
+        self.hauteur = Batiment.DEFAULT_FOOTPRINT
 
     def get_stats(self):
         return Batiment.DATA[self.type][self.niveau]
@@ -70,21 +73,29 @@ class Batiment:
 
     def get_upgrade_cost(self):
         """Returns the cost to reach the next level, or None if at cap or max."""
-        cap = get_max_level(self.type)
-        if self.niveau >= cap or self.niveau >= 3:
+        if self.niveau >= 3:
             return None
-        return Batiment.DATA[self.type][self.niveau + 1]["cout"]
+        next_level = self.niveau + 1
+        cap = get_max_level(self.type)
+        if next_level > cap:
+            return None
+        return Batiment.DATA[self.type][next_level]["cout"]
 
     def upgrade(self):
         """Upgrade by one level, respecting the skill-tree cap."""
+        if self.niveau >= 3:
+            return
+        next_level = self.niveau + 1
         cap = get_max_level(self.type)
-        if self.niveau < cap and self.niveau < 3:
+        if next_level <= cap:
             self.niveau += 1
 
     def est_max_level(self):
-        """True if the building is at the current allowed cap (or absolute max)."""
+        """True if no more upgrades are available."""
+        if self.niveau >= 3:
+            return True
         cap = get_max_level(self.type)
-        return self.niveau >= cap or self.niveau >= 3
+        return self.niveau >= cap
 
     def collision(self, autre):
         return not (
@@ -114,6 +125,8 @@ class Batiment:
     def from_dict(cls, d):
         obj = cls(d["type"], d["x"], d["y"])
         obj.niveau = d.get("niveau", 1)
-        obj.largeur = d.get("largeur", 175)
-        obj.hauteur = d.get("hauteur", 175)
+        # Normalisation : on force le footprint "grille fine" pour éviter
+        # les superpositions/collisions incohérentes avec d'anciennes saves.
+        obj.largeur = Batiment.DEFAULT_FOOTPRINT
+        obj.hauteur = Batiment.DEFAULT_FOOTPRINT
         return obj

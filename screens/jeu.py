@@ -19,29 +19,29 @@ dt = 0.0
 def on_message_recu(TAILLE_CASE):
     global batiments, players, indice, connected
     messageprec = None
-    while True:
+    while not stop_event.is_set():
         try:
-            send_str_client("pos", client_module.CLIENT)
-            while True:
-                if client_module.result is not None:
-                    message, type = client_module.result
-                    if message != messageprec:
-                        if type == "float":
-                            connected = message
-                        if type == "int":
-                            indice = message
-                            print(indice)
-                        if type == "liste_batiments":
-                            batiments = message
-                        elif type == "liste_joueurs":
-                            players = message
-                            print(players)
-                            for player in players:
-                                player.update_anim(dt, players)
+            if client_module.CLIENT is not None:
+                send_str_client("pos", client_module.CLIENT)
+
+            if client_module.result is not None:
+                message, type = client_module.result
+                if message != messageprec:
+                    if type == "float":
+                        connected = message
+                    elif type == "int":
+                        indice = message
+                    elif type == "liste_batiments":
+                        batiments = message
+                    elif type == "liste_joueurs":
+                        players = message
+                        for player in players:
+                            player.update_anim(dt, players)
                     messageprec = message
-                    time.sleep(0.1)
-        except Exception as e:
-            pass
+
+            time.sleep(0.05)
+        except Exception:
+            time.sleep(0.1)
 
 def new_player(TAILLE_CASE):
     global players
@@ -53,34 +53,27 @@ def new_player(TAILLE_CASE):
 def draw_players(surface, camera_x, camera_y):
     global players
     nuber = 0
-    if surface and camera_x and camera_y is not None:
-        for player in players:
-            player.draw_player(surface, camera_x, camera_y)
-            nuber = nuber + 1
+    if surface is None or camera_x is None or camera_y is None:
+        return
+    for player in players:
+        player.draw_player(surface, camera_x, camera_y)
+        nuber = nuber + 1
 
 from core.Class.player import Player
 from core.Class.batiments import Batiment
 from core.Class.npc import Npc
 from core.saves import load_save
 
-
 from screens.tutorial import run_tutorial
 from screens.terminal import Terminal
-from screens.utils import collision, calculer_rects_icones, souris_vers_case, joueur_a_portee, dessiner_grille, dessiner_grille_overlay
+from screens.utils import collision, calculer_rects_icones, souris_vers_case, joueur_a_portee, dessiner_grille, dessiner_grille_overlay, dessiner_grille_overlay_monde, dessiner_grille_overlay_ecran
 from screens.game_logic import synchroniser_npcs, calculer_production
 from screens.render import dessiner_monde, dessiner_hud
 from core.pve import RaidManager
 
-
-from core.Class.player import Player
-from core.Class.batiments import Batiment
-from core.Class.npc import Npc
-from core.saves import load_save
 from screens.GUI.menu_amelioration import afficher_menu_amelioration
 import core.sounds as sound
-from screens.tutorial import run_tutorial
-from screens.terminal import Terminal
-#patch pour la farm et autres
+
 def corriger_transparence(surface):
     width, height = surface.get_size()
     for x in range(width):
@@ -91,7 +84,7 @@ def corriger_transparence(surface):
     return surface
 surface_monde, camera_x, camera_y = None, None, None
 TAILLE_CASE = None
-def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
+def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False):
     global batiments, indice
     global players, TAILLE_CASE
     global surface_monde, camera_x, camera_y, dt
@@ -99,10 +92,23 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
     LARGEUR_ECRAN, HAUTEUR_ECRAN = ecran.get_size()
     dims = [LARGEUR_ECRAN, HAUTEUR_ECRAN]  # mutable pour mise a jour au resize
 
+    # Grille fine (style Clash of Clans) : petites cases indépendantes des sprites
+    # 3x3 cases = 1 bâtiment
+    herbe = None
+    # Taille d'une case "grille fine" (placement + déplacements).
+    # Tu peux la modifier ici.
+    TAILLE_CASE = 40
 
+    def _pos_centre_case(cx: int, cy: int):
+        return ((cx + 0.5) * TAILLE_CASE, (cy + 0.5) * TAILLE_CASE)
 
-    herbe = pygame.image.load("assets/grass.png").convert()
-    TAILLE_CASE = herbe.get_width()
+    # S'assurer qu'un joueur existe avant tout accès à players[indice]
+    if not players:
+        Player.load_sprites()
+        p = Player()
+        p.pos = _pos_centre_case(5, 5)
+        players.append(p)
+        indice = 0
 
     images_batiments = {
         Batiment.TYPE_RESIDENTIEL: {
@@ -150,29 +156,38 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
     hud_vapeur_img = pygame.image.load("assets/vapeur.png").convert_alpha()
     save_done_img = pygame.image.load("assets/save_done.png").convert_alpha()
 
-    # Dictionnaire des bâtiments placés
-    # clé : (x_case, y_case)
-    # valeur : index du bâtiment
     is_new_game = not os.path.exists("save/save.json")
     if not dev_mode and os.path.exists("save/save.json"):
+        if not players or indice < 0 or indice >= len(players):
+            Player.load_sprites()
+            p = Player()
+            p.pos = _pos_centre_case(5, 5)
+            players[:] = [p]
+            indice = 0
         if not load_save(batiments, players[indice]):
             print("ERREUR CRITIQUE: Lecture du fichier save/save.json")
             return False
 
     if dev_mode:
+        if not players:
+            Player.load_sprites()
+            p = Player()
+            p.pos = _pos_centre_case(5, 5)
+            players.append(p)
         players[indice].money = 5000
         players[indice].food = 5000
         players[indice].vapeur = 5000
 
+    player = players[indice]
+
     synchroniser_npcs(batiments, npcs, players[indice], TAILLE_CASE)
 
     # Camera et zoom
-    camera_x = players[indice].pos[0] - dims[0] / 2
-    camera_y = players[indice].pos[1] - (dims[1] - HAUTEUR_BARRE) / 2
+    camera_x = player.pos[0] - dims[0] / 2
+    camera_y = player.pos[1] - (dims[1] - HAUTEUR_BARRE) / 2
     zoom = 1.0
 
 
-    #tuto
     if is_new_game and not dev_mode:
         def _draw_tuto_background():
             ecran.fill((0, 0, 0))
@@ -182,13 +197,15 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
             surf_tuto = pygame.Surface(
                 (math.ceil(largeur_vue), math.ceil(hauteur_vue))
             ).convert()
-            couleur_grille = (20, 80, 20)
+            # Sol steampunk + grille fine
+            couleur_sol = (58, 44, 32)
+            couleur_grille = (92, 72, 44)
             epaisseur = 2
             debut_x = int(camera_x // TAILLE_CASE) * TAILLE_CASE
             debut_y = int(camera_y // TAILLE_CASE) * TAILLE_CASE
             for ty in range(debut_y, debut_y + int(hauteur_vue) + TAILLE_CASE, TAILLE_CASE):
                 for tx in range(debut_x, debut_x + int(largeur_vue) + TAILLE_CASE, TAILLE_CASE):
-                    surf_tuto.blit(herbe, (tx - camera_x, ty - camera_y))
+                    surf_tuto.fill(couleur_sol, pygame.Rect(tx - camera_x, ty - camera_y, TAILLE_CASE, TAILLE_CASE))
                     pygame.draw.rect(surf_tuto, couleur_grille,
                         (tx - camera_x, ty - camera_y, TAILLE_CASE, TAILLE_CASE), epaisseur)
             players[indice].draw_player(surf_tuto, camera_x, camera_y)
@@ -231,7 +248,6 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
     deplacement_camera = False
     derniere_souris = (0, 0)
 
-    # booléen pour savoir si la barre de bâtiments est ouverte ou fermée
     barre_ouverte = False
     SLIDE_SPEED = 400
     slide_offset = HAUTEUR_BARRE
@@ -240,9 +256,9 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
 
     rects_icones = calculer_rects_icones(dims, HAUTEUR_BARRE, TAILLE_ICONE, slide_offset)
     en_cours = True
-    acc_argent   = 0.0  # mine → money
-    acc_food     = 0.0  # farm → food
-    acc_vapeur   = 0.0  # generateur → vapeur
+    acc_argent   = 0.0
+    acc_food     = 0.0
+    acc_vapeur   = 0.0
     save_done_timer = 0.0
     attack_cooldown = 0.0
     ATTACK_COOLDOWN_MAX = 0.6  # secondes entre chaque attaque
@@ -252,10 +268,24 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
     current_playlist_index = 0
     ambient_delay_timer = 0.0
 
+    surface_monde = None
+    surface_monde_size = None  # (w, h) en px monde (avant scaling écran)
+
     while en_cours:
         dt = horloge.tick(FPS) / 1000.0
         save_done_timer = max(0, save_done_timer - dt)
         attack_cooldown = max(0.0, attack_cooldown - dt)
+
+        # Si l'indice joueur change (online) ou si la liste joueurs est mise à jour
+        if not players:
+            Player.load_sprites()
+            p = Player()
+            p.pos = _pos_centre_case(5, 5)
+            players.append(p)
+            indice = 0
+        elif indice < 0 or indice >= len(players):
+            indice = max(0, min(indice, len(players) - 1))
+        player = players[indice]
 
         # animation d'ouverture/fermeture de la barre de batiments
         cible_offset = 0 if barre_ouverte else HAUTEUR_BARRE
@@ -350,7 +380,8 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
                 else:
                     sx, sy = pygame.mouse.get_pos()
                     case = souris_vers_case((sx, sy), camera_x, camera_y, zoom, TAILLE_CASE)
-                    if sy < HAUTEUR_ECRAN - HAUTEUR_BARRE:
+                    limite_ui = HAUTEUR_ECRAN - (HAUTEUR_BARRE - slide_offset)
+                    if sy < limite_ui:
                         if not players[indice].a_star(case, TAILLE_CASE):
                             print("Chemin bloqué")
 
@@ -432,13 +463,14 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
                             
 
                 # Placement du bâtiment sur la grille
-                if not clic_barre and not monster_clicked and sy < HAUTEUR_ECRAN - HAUTEUR_BARRE:
+                limite_ui = HAUTEUR_ECRAN - (HAUTEUR_BARRE - slide_offset)
+                if not clic_barre and not monster_clicked and sy < limite_ui:
                     mx = camera_x + sx / zoom
                     my = camera_y + sy / zoom
 
                     if batiment_selectionne is not None:
-                        grid_x = int(mx // TAILLE_CASE)
-                        grid_y = int(my // TAILLE_CASE)
+                        grid_x = int(mx // TAILLE_CASE) - 1
+                        grid_y = int(my // TAILLE_CASE) - 1
 
                         type_batiment = TYPES_BATIMENTS[batiment_selectionne]
                         image_ref = images_batiments[type_batiment][1]
@@ -451,8 +483,9 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
                         nb_production = sum(1 for b in batiments if b.type != Batiment.TYPE_RESIDENTIEL)
                         production_pleine = (type_batiment != Batiment.TYPE_RESIDENTIEL and nb_production >= nb_villageois)
 
-                        if not joueur_a_portee((grid_x, grid_y), players[indice], TAILLE_CASE):
-                            print("Trop loin : rapprochez-vous de la case (2 cases max)")
+                        # Portée de pose augmentée
+                        if not joueur_a_portee((grid_x, grid_y), players[indice], TAILLE_CASE, distance_max=10, largeur=nouveau.largeur, hauteur=nouveau.hauteur):
+                            print("Trop loin : rapprochez-vous de la zone (10 cases max)")
                         elif production_pleine:
                             print("Pas assez de villageois pour ce batiment de production")
                         elif not collision(batiments, nouveau) and players[indice].money >= cout:
@@ -475,8 +508,8 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
                             rect = B.get_rect_pixel(TAILLE_CASE)
 
                             if rect.collidepoint(mx, my):
-                                if not joueur_a_portee((B.x, B.y), players[indice], TAILLE_CASE):
-                                    print("Trop loin : rapprochez-vous du bâtiment (2 cases max)")
+                                if not joueur_a_portee((B.x, B.y), players[indice], TAILLE_CASE, distance_max=10, largeur=B.largeur, hauteur=B.hauteur):
+                                    print("Trop loin : rapprochez-vous du bâtiment (10 cases max)")
                                     break
                                 resultat = afficher_menu_amelioration(ecran, B, sx, players[indice])
 
@@ -499,8 +532,8 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
                 mode_sell = False
 
 
-        players[indice].update(TAILLE_CASE, dt)
-        players[indice].update_anim(dt, players)
+        player.update(TAILLE_CASE, dt)
+        player.update_anim(dt)
 
         # --- Mort du joueur ---
         if player.hp <= 0:
@@ -511,7 +544,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
                 # Réinitialiser le joueur et le raid
                 player.hp = player.hp_max
                 player.path = []
-                player.pos = (TAILLE_CASE * 5, TAILLE_CASE * 5)
+                player.pos = _pos_centre_case(5, 5)
                 raid_manager.monsters.clear()
                 raid_manager.damage_numbers.clear()
                 raid_manager._raid_active = False
@@ -530,21 +563,25 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
         largeur_vue = dims[0] / zoom
         hauteur_vue = dims[1] / zoom
 
-        surface_monde = pygame.Surface(
-            (math.ceil(largeur_vue), math.ceil(hauteur_vue))
-        ).convert()
+        needed_size = (math.ceil(largeur_vue), math.ceil(hauteur_vue))
+        if surface_monde is None or surface_monde_size != needed_size:
+            surface_monde = pygame.Surface(needed_size).convert()
+            surface_monde_size = needed_size
 
         dessiner_grille(surface_monde, camera_x, camera_y, dims, 0, zoom, herbe, TAILLE_CASE)
 
         dessiner_monde(surface_monde, batiments, images_batiments, camera_x, camera_y, TAILLE_CASE, batiment_selectionne, TYPES_BATIMENTS, player, npcs, image_pnj, dt, zoom, raid_manager=raid_manager)
 
-        surface_affichee = pygame.transform.scale(
-            surface_monde,
-            (dims[0], dims[1])
-        )
+        if surface_monde_size == (dims[0], dims[1]):
+            surface_affichee = surface_monde
+        else:
+            surface_affichee = pygame.transform.scale(surface_monde, (dims[0], dims[1]))
 
         ecran.blit(surface_affichee, (0, 0))
-        dessiner_grille_overlay(ecran, camera_x, camera_y, dims, 0, zoom, TAILLE_CASE)
+        # Grille (mode placement) dessinée en pixels écran pour éviter les artefacts de scaling.
+        if batiment_selectionne is not None:
+            hauteur_ui = int(HAUTEUR_BARRE - slide_offset)
+            dessiner_grille_overlay_ecran(ecran, camera_x, camera_y, dims, hauteur_ui, zoom, TAILLE_CASE)
 
         # --- Curseur épée si un monstre est à portée sous la souris ---
         mx_cur, my_cur = pygame.mouse.get_pos()

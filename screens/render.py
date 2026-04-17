@@ -2,14 +2,44 @@ import pygame
 import math
 from screens.utils import collision, souris_vers_case, joueur_a_portee
 
+def _scale_contain(img: pygame.Surface, max_w: int, max_h: int) -> pygame.Surface:
+    """Scale an image to fit inside (max_w, max_h) preserving aspect ratio."""
+    iw, ih = img.get_size()
+    if iw <= 0 or ih <= 0 or max_w <= 0 or max_h <= 0:
+        return img
+    scale = min(max_w / iw, max_h / ih)
+    # Ne pas upscaler si déjà pile, mais autoriser l'upscale quand les cases grossissent.
+    new_w = max(1, int(round(iw * scale)))
+    new_h = max(1, int(round(ih * scale)))
+    if new_w == iw and new_h == ih:
+        return img
+    return pygame.transform.smoothscale(img, (new_w, new_h))
+
+def _get_scaled_batiment_image(images_batiments, type_batiment, niveau, footprint_w_px, footprint_h_px, cache):
+    """Return cached scaled building image that fits in the 3x3 footprint."""
+    key = (type_batiment, niveau, footprint_w_px, footprint_h_px)
+    if key in cache:
+        return cache[key]
+    base = images_batiments[type_batiment][niveau]
+    scaled = _scale_contain(base, footprint_w_px, footprint_h_px)
+    cache[key] = scaled
+    return scaled
+
 def dessiner_monde(surface_monde, batiments, images_batiments, camera_x, camera_y, TAILLE_CASE, batiment_selectionne, TYPES_BATIMENTS, player, npcs, image_pnj, dt, zoom, raid_manager=None):
     from screens.utils import collision, souris_vers_case, joueur_a_portee
     from core.Class.batiments import Batiment
 
+    # Cache par frame pour éviter de rescaler en boucle
+    scaled_cache = {}
+
     for B in batiments:
-        image = images_batiments[B.type][B.niveau]
-        x = B.x * TAILLE_CASE - camera_x + (TAILLE_CASE - image.get_width()) // 2
-        y = B.y * TAILLE_CASE - camera_y + (TAILLE_CASE - image.get_height()) // 2
+        footprint_w_px = B.largeur * TAILLE_CASE
+        footprint_h_px = B.hauteur * TAILLE_CASE
+        image = _get_scaled_batiment_image(
+            images_batiments, B.type, B.niveau, footprint_w_px, footprint_h_px, scaled_cache
+        )
+        x = B.x * TAILLE_CASE - camera_x + (footprint_w_px - image.get_width()) / 2
+        y = B.y * TAILLE_CASE - camera_y + (footprint_h_px - image.get_height()) / 2
         surface_monde.blit(image, (x, y))
 
     # fantome
@@ -18,15 +48,19 @@ def dessiner_monde(surface_monde, batiments, images_batiments, camera_x, camera_
         case = souris_vers_case((sx, sy), camera_x, camera_y, zoom, TAILLE_CASE)
         type_batiment = TYPES_BATIMENTS[batiment_selectionne]
         test_batiment = Batiment(type_batiment, case[0], case[1])
-        image = images_batiments[type_batiment][1]
+        footprint_w_px = test_batiment.largeur * TAILLE_CASE
+        footprint_h_px = test_batiment.hauteur * TAILLE_CASE
+        image = _get_scaled_batiment_image(
+            images_batiments, type_batiment, 1, footprint_w_px, footprint_h_px, scaled_cache
+        )
         image_fantome = image.copy()
         if collision(batiments, test_batiment):
             image_fantome.fill((255, 0, 0, 120), special_flags=pygame.BLEND_RGBA_MULT)
-        elif not joueur_a_portee(case, player, TAILLE_CASE):
+        elif not joueur_a_portee(case, player, TAILLE_CASE, distance_max=10, largeur=test_batiment.largeur, hauteur=test_batiment.hauteur):
             image_fantome.fill((255, 140, 0, 120), special_flags=pygame.BLEND_RGBA_MULT)
 
-        x = case[0] * TAILLE_CASE - camera_x + (TAILLE_CASE - image.get_width()) // 2
-        y = case[1] * TAILLE_CASE - camera_y + (TAILLE_CASE - image.get_height()) // 2
+        x = case[0] * TAILLE_CASE - camera_x + (footprint_w_px - image.get_width()) / 2
+        y = case[1] * TAILLE_CASE - camera_y + (footprint_h_px - image.get_height()) / 2
 
         surface_monde.blit(image_fantome, (x, y))
 

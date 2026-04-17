@@ -2,7 +2,7 @@
 Gestionnaire de raids PVE.
 
 Un raid = 4 vagues de monstres.
-Chaque vague : 3 ou 4 monstres spawnent à ~5 cases de chaque joueur.
+Chaque vague : 3 ou 4 monstres spawnent à ~40 cases de chaque joueur.
 Entre les vagues : WAVE_DELAY secondes.
 
 Sans déclenchement manuel, un raid se lance toutes les AUTO_RAID_MIN à AUTO_RAID_MAX minutes.
@@ -62,7 +62,7 @@ class RaidManager:
     WAVES_PER_RAID   = 4
     MONSTERS_PER_WAVE_MIN = 2
     MONSTERS_PER_WAVE_MAX = 4
-    SPAWN_DISTANCE_CASES  = 5   # ~5 cases du joueur
+    SPAWN_DISTANCE_CASES  = 40   # ~40 cases du joueur
     WAVE_DELAY            = 10.0  # secondes entre vagues
     AUTO_RAID_MIN         = 10 * 60.0   # 10 min
     AUTO_RAID_MAX         = 20 * 60.0   # 20 min
@@ -152,7 +152,7 @@ class RaidManager:
         for player in players:
             for _ in range(nb):
                 angle = random.uniform(0, 2 * math.pi)
-                # Distance : exactement ~5 cases + léger aléatoire
+                # Distance : exactement ~40 cases + léger aléatoire
                 dist_px = (self.SPAWN_DISTANCE_CASES + random.uniform(-0.5, 0.5)) * self.taille_case
                 mx = player.pos[0] + math.cos(angle) * dist_px
                 my = player.pos[1] + math.sin(angle) * dist_px

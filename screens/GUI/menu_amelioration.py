@@ -22,30 +22,29 @@ def afficher_menu_amelioration(ecran, batiment, clic_x, player):
     image_fond = pygame.image.load("assets/buttons/upgrade_menu_interface.png").convert_alpha()
     image_fond = pygame.transform.scale_by(image_fond, 1 )
 
-#tous les différents boutons
-    btn_fermer = BoutonImage(
-        menu_x + 400 + offset_block, menu_y +32+ offset_block , 90, 90,
-        "assets/buttons/close_button.png", "assets/buttons/close_button.png",
-        ""
-    )
-    btn_sell = BoutonImage(
-        menu_x + 270+ offset_block, menu_y + 180+ offset_block, 180, 85,
-        "assets/buttons/sell_button.png", "assets/buttons/sell_button.png",
-        ""
-    )
-    if  batiment.est_max_level() or player.money <= batiment.get_upgrade_cost():
-        btn_ameliorer = BoutonImage(menu_x + 70+ offset_block, menu_y + 180+ offset_block, 200, 85,
-                                    "assets/buttons/upgrade_impossible_button.png",
-                                    "assets/buttons/upgrade_impossible_button.png",
-                                    f"")
-    else:
-        btn_ameliorer = BoutonImage(
-            menu_x + 70+ offset_block, menu_y + 180+ offset_block, 210, 85,
-            "assets/buttons/upgrade_available_button.png", "assets/buttons/upgrade_available_button.png",
-            f""
-        )
-
     while en_menu:
+        btn_fermer = BoutonImage(
+            menu_x + 400 + offset_block, menu_y +32+ offset_block , 90, 90,
+            "assets/buttons/close_button.png", "assets/buttons/close_button.png",
+            ""
+        )
+        btn_sell = BoutonImage(
+            menu_x + 270+ offset_block, menu_y + 180+ offset_block, 180, 85,
+            "assets/buttons/sell_button.png", "assets/buttons/sell_button.png",
+            ""
+        )
+        upgrade_cost = batiment.get_upgrade_cost()
+        if batiment.est_max_level() or upgrade_cost is None or player.money <= upgrade_cost:
+            btn_ameliorer = BoutonImage(menu_x + 70+ offset_block, menu_y + 180+ offset_block, 200, 85,
+                                        "assets/buttons/upgrade_impossible_button.png",
+                                        "assets/buttons/upgrade_impossible_button.png",
+                                        f"")
+        else:
+            btn_ameliorer = BoutonImage(
+                menu_x + 70+ offset_block, menu_y + 180+ offset_block, 210, 85,
+                "assets/buttons/upgrade_available_button.png", "assets/buttons/upgrade_available_button.png",
+                f""
+            )
         ecran.blit(image_fond, (menu_x, menu_y))
 
         # Textes d'information
@@ -115,17 +114,16 @@ def afficher_menu_amelioration(ecran, batiment, clic_x, player):
                     en_menu = False
 
                 if btn_ameliorer and btn_ameliorer.clic():
-                    if batiment.niveau < 3:
-                        if player.money >= batiment.get_upgrade_cost():
-
-                            sound.son_upgrade.play()
-                            player.money -= batiment.get_upgrade_cost()
-                            batiment.upgrade()
-                            return "upgrade"
-
-
-                    en_menu = False
-                if btn_ameliorer and btn_sell.clic():
+                    upgrade_cost = batiment.get_upgrade_cost()
+                    if upgrade_cost is not None and player.money >= upgrade_cost:
+                        sound.son_upgrade.play()
+                        player.money -= upgrade_cost
+                        batiment.upgrade()
+                        en_menu = False
+                        return "upgrade"
+                    else:
+                        en_menu = False
+                if btn_sell.clic():
                     return "supprimer"
 
         # Affichage boutons
