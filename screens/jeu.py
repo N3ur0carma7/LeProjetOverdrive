@@ -4,7 +4,8 @@ import os
 import threading
 from multiplayer.serveur import *
 import multiplayer.client as client_module
-from multiplayer.client import send_list_client, receive_loop, send_batiment_client, send_liste_batiments_client, send_liste_joueurs_client
+from multiplayer.client import send_list_client, receive_loop, send_batiment_client, send_liste_batiments_client, \
+    send_liste_joueurs_client, CLIENT, send_str_client, is_connected
 from core.Class.batiments import *
 import time
 import random
@@ -12,25 +13,57 @@ import random
 stop_event = threading.Event()
 batiments = []
 players = []
-batiments_recus = []
-joueurs_recus = []
-def on_message_recu(result):
-    global batiments_recus, joueurs_recus
-    message, type = result
-    if type == 'liste_batiments':
-        batiments_recus = message
-    elif type == 'liste_joueurs':
-        joueurs_recus = message
+indice = 0
+connected = 0
+dt = 0.0
+def on_message_recu(TAILLE_CASE):
+    global batiments, players, indice, connected
+    messageprec = None
+    while True:
+        try:
+            send_str_client("pos", client_module.CLIENT)
+            while True:
+                if client_module.result is not None:
+                    message, type = client_module.result
+                    if message != messageprec:
+                        if type == "float":
+                            connected = message
+                        if type == "int":
+                            indice = message
+                            print(indice)
+                        if type == "liste_batiments":
+                            batiments = message
+                        elif type == "liste_joueurs":
+                            players = message
+                            print(players)
+                            for player in players:
+                                player.update_anim(dt, players)
+                    messageprec = message
+                    time.sleep(0.1)
+        except Exception as e:
+            pass
 
-client_module.receive_callback = on_message_recu
+def new_player(TAILLE_CASE):
+    global players
+    player = Player()
+    # Spawn du joueur au milieu d'une case
+    player.pos = (TAILLE_CASE / 2, TAILLE_CASE / 2)
+    players.append(player)
 
+def draw_players(surface, camera_x, camera_y):
+    global players
+    nuber = 0
+    if surface and camera_x and camera_y is not None:
+        for player in players:
+            player.draw_player(surface, camera_x, camera_y)
+            nuber = nuber + 1
 
 from core.Class.player import Player
 from core.Class.batiments import Batiment
 from core.Class.npc import Npc
 from core.saves import load_save
-from screens.GUI.menu_amelioration import afficher_menu_amelioration
-import core.sounds as sound
+
+
 from screens.tutorial import run_tutorial
 from screens.terminal import Terminal
 from screens.utils import collision, calculer_rects_icones, souris_vers_case, joueur_a_portee, dessiner_grille, dessiner_grille_overlay
@@ -56,10 +89,12 @@ def corriger_transparence(surface):
             if color.a < 20:
                 surface.set_at((x, y), (0, 0, 0, 0))
     return surface
-
+surface_monde, camera_x, camera_y = None, None, None
+TAILLE_CASE = None
 def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
-    global batiments
-    global players
+    global batiments, indice
+    global players, TAILLE_CASE
+    global surface_monde, camera_x, camera_y, dt
     HAUTEUR_BARRE = 100
     LARGEUR_ECRAN, HAUTEUR_ECRAN = ecran.get_size()
     dims = [LARGEUR_ECRAN, HAUTEUR_ECRAN]  # mutable pour mise a jour au resize
@@ -100,13 +135,13 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
     ]
 
     TAILLE_ICONE = 64
-
-    player = Player()
     batiments = []
     npcs = []
-
-    # Spawn du joueur au milieu d'une case
-    player.pos = (TAILLE_CASE / 2, TAILLE_CASE / 2)
+    if not dev_mode and client_module.CLIENT != None:
+        time.sleep(1)
+        update = threading.Thread(target=on_message_recu, args=(TAILLE_CASE,), daemon=True)
+        update.start()
+        time.sleep(1)
 
     image_pnj = pygame.image.load("assets/pnj.png").convert_alpha()
     font_argent = pygame.font.Font("assets/fonts/Minecraft.ttf", 15)
@@ -115,27 +150,28 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
     hud_vapeur_img = pygame.image.load("assets/vapeur.png").convert_alpha()
     save_done_img = pygame.image.load("assets/save_done.png").convert_alpha()
 
-    players.append(player)
     # Dictionnaire des bâtiments placés
     # clé : (x_case, y_case)
     # valeur : index du bâtiment
     is_new_game = not os.path.exists("save/save.json")
     if not dev_mode and os.path.exists("save/save.json"):
-        if not load_save(batiments, player):
+        if not load_save(batiments, players[indice]):
             print("ERREUR CRITIQUE: Lecture du fichier save/save.json")
             return False
 
     if dev_mode:
-        player.money = 5000
-        player.food = 5000
-        player.vapeur = 5000
+        players[indice].money = 5000
+        players[indice].food = 5000
+        players[indice].vapeur = 5000
 
-    synchroniser_npcs(batiments, npcs, player, TAILLE_CASE)
+    synchroniser_npcs(batiments, npcs, players[indice], TAILLE_CASE)
 
     # Camera et zoom
-    camera_x = player.pos[0] - dims[0] / 2
-    camera_y = player.pos[1] - (dims[1] - HAUTEUR_BARRE) / 2
+    camera_x = players[indice].pos[0] - dims[0] / 2
+    camera_y = players[indice].pos[1] - (dims[1] - HAUTEUR_BARRE) / 2
     zoom = 1.0
+
+
     #tuto
     if is_new_game and not dev_mode:
         def _draw_tuto_background():
@@ -155,7 +191,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
                     surf_tuto.blit(herbe, (tx - camera_x, ty - camera_y))
                     pygame.draw.rect(surf_tuto, couleur_grille,
                         (tx - camera_x, ty - camera_y, TAILLE_CASE, TAILLE_CASE), epaisseur)
-            player.draw_player(surf_tuto, camera_x, camera_y)
+            players[indice].draw_player(surf_tuto, camera_x, camera_y)
             ecran.blit(surf_tuto, (0, 0))
             pygame.draw.rect(
                 ecran, (40, 40, 40),
@@ -241,7 +277,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
                     current_playlist_index = 0
                 ambient_delay_timer = 3.0 
 
-        acc_argent, acc_food, acc_vapeur = calculer_production(batiments, player, dt, acc_argent, acc_food, acc_vapeur)
+        acc_argent, acc_food, acc_vapeur = calculer_production(batiments, players[indice], dt, acc_argent, acc_food, acc_vapeur)
 
 
         for event in pygame.event.get():
@@ -266,10 +302,10 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
                 from screens.pause import menu_pause
                 screenshot = ecran.copy()
                 if online:
-                    etat_pause = menu_pause(ecran, horloge, FPS, batiments, online, player, screenshot)
+                    etat_pause = menu_pause(ecran, horloge, FPS, batiments, online, players[indice], screenshot)
                     pass
                 else:
-                    etat_pause = menu_pause(ecran, horloge, FPS, batiments, online, player, screenshot)
+                    etat_pause = menu_pause(ecran, horloge, FPS, batiments, online, players[indice], screenshot)
                 if etat_pause == "jeu_save_done":
                     save_done_timer = 1.5  # show for 1.5 seconds
                 elif not etat_pause:
@@ -314,10 +350,10 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
                 else:
                     sx, sy = pygame.mouse.get_pos()
                     case = souris_vers_case((sx, sy), camera_x, camera_y, zoom, TAILLE_CASE)
-
                     if sy < HAUTEUR_ECRAN - HAUTEUR_BARRE:
-                        if not player.a_star(case, TAILLE_CASE):
+                        if not players[indice].a_star(case, TAILLE_CASE):
                             print("Chemin bloqué")
+
 
 
 # Clic gauche
@@ -415,15 +451,15 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
                         nb_production = sum(1 for b in batiments if b.type != Batiment.TYPE_RESIDENTIEL)
                         production_pleine = (type_batiment != Batiment.TYPE_RESIDENTIEL and nb_production >= nb_villageois)
 
-                        if not joueur_a_portee((grid_x, grid_y), player, TAILLE_CASE):
+                        if not joueur_a_portee((grid_x, grid_y), players[indice], TAILLE_CASE):
                             print("Trop loin : rapprochez-vous de la case (2 cases max)")
                         elif production_pleine:
                             print("Pas assez de villageois pour ce batiment de production")
-                        elif not collision(batiments, nouveau) and player.money >= cout:
-                            player.money -= cout
+                        elif not collision(batiments, nouveau) and players[indice].money >= cout:
+                            players[indice].money -= cout
                             batiments.append(nouveau)
                             sound.son_placement.play()
-                            synchroniser_npcs(batiments, npcs, player, TAILLE_CASE)
+                            synchroniser_npcs(batiments, npcs, players[indice], TAILLE_CASE)
                             if client_module.CLIENT is not None and online:
                                 print(f"envoi en cours {batiments}")
                                 send_liste_batiments_client(batiments, client_module.CLIENT)
@@ -439,32 +475,32 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
                             rect = B.get_rect_pixel(TAILLE_CASE)
 
                             if rect.collidepoint(mx, my):
-                                if not joueur_a_portee((B.x, B.y), player, TAILLE_CASE):
+                                if not joueur_a_portee((B.x, B.y), players[indice], TAILLE_CASE):
                                     print("Trop loin : rapprochez-vous du bâtiment (2 cases max)")
                                     break
-                                resultat = afficher_menu_amelioration(ecran, B, sx, player)
+                                resultat = afficher_menu_amelioration(ecran, B, sx, players[indice])
 
                                 if resultat == "supprimer":
                                     batiments.remove(B)
                                     cashback = 0
                                     for k in range(B.niveau):
                                         cashback += Batiment.DATA[B.type][1+k]["cout"]
-                                    player.money += cashback
+                                    players[indice].money += cashback
                                     if client_module.CLIENT is not None and online:
                                         send_liste_batiments_client(batiments, client_module.CLIENT)
                                 elif resultat == "upgrade":
                                     if client_module.CLIENT is not None and online:
                                         send_liste_batiments_client(batiments, client_module.CLIENT)
 
-                                synchroniser_npcs(batiments, npcs, player, TAILLE_CASE)
+                                synchroniser_npcs(batiments, npcs, players[indice], TAILLE_CASE)
 
                                 break
                 #Boutton SELL pour vendre les batiments quand c'est selectionné
                 mode_sell = False
 
 
-        player.update(TAILLE_CASE, dt)
-        player.update_anim(dt)
+        players[indice].update(TAILLE_CASE, dt)
+        players[indice].update_anim(dt, players)
 
         # --- Mort du joueur ---
         if player.hp <= 0:
