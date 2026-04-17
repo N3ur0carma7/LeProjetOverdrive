@@ -2,21 +2,21 @@ import math
 import pygame
 
 # ---------------------------------------------------------------------------
-# Spritesheets Mechanic Mike
-# Chaque frame fait 80px de large x 64px de haut.
+# Spritesheets player
+# Chaque frame fait 48px de large x 48px de haut.
 # Les images sont des bandes horizontales de frames.
 # ---------------------------------------------------------------------------
 
-FRAME_W = 80   # largeur d'une frame
-FRAME_H = 64   # hauteur d'une frame
+FRAME_W = 48   # largeur d'une frame
+FRAME_H = 48   # hauteur d'une frame
 
-# Nombre de frames par animation (width / 80)
+# Nombre de frames par animation (width / 48)
 ANIM_FRAMES = {
-    "idle":         7,   # 560 / 80
-    "run":          6,   # 480 / 80
-    "hand_cannon": 10,   # 800 / 80
-    "hit":          5,   # 400 / 80
-    "death":        7,   # 560 / 80
+    "idle":         4,   # 192 / 48
+    "run":          6,   # 288 / 48
+    "hand_cannon":  6,   # 288 / 48
+    "hit":          3,   # 144 / 48
+    "death":        6,   # 288 / 48
 }
 
 # FPS par animation
@@ -75,7 +75,7 @@ class Player:
         self._attack_anim_timer    = 0.0
         self._attack_anim_duration = ANIM_FRAMES["hand_cannon"] / ANIM_FPS["hand_cannon"]
 
-        self.sprite_height = 72
+        self.sprite_height = 128
 
     # ------------------------------------------------------------------
     def trigger_attack_anim(self):
@@ -97,7 +97,12 @@ class Player:
     # Pathfinding
     # ------------------------------------------------------------------
     def heuristique(self, start, dest):
-        return abs(start[0] - dest[0]) + abs(start[1] - dest[1])
+        dx = abs(start[0] - dest[0])
+        dy = abs(start[1] - dest[1])
+        d1 = 1.0
+        d2 = math.sqrt(2)
+        # Heuristique "octile" (8 directions) : admissible avec coûts 1 et sqrt(2)
+        return d1 * (dx + dy) + (d2 - 2 * d1) * min(dx, dy)
 
     def reconstruire_path(self, came_from, current):
         chemin = [current]
@@ -122,11 +127,15 @@ class Player:
                 return True
             open_set.remove(current)
             closed_set.add(current)
-            for voisin in [(current[0]+1,current[1]),(current[0],current[1]+1),
-                           (current[0]-1,current[1]),(current[0],current[1]-1)]:
+            for dx, dy in (
+                (1, 0), (0, 1), (-1, 0), (0, -1),
+                (1, 1), (-1, 1), (-1, -1), (1, -1),
+            ):
+                voisin = (current[0] + dx, current[1] + dy)
                 if voisin in closed_set:
                     continue
-                tentative_g = g_score[current] + 1
+                step_cost = math.sqrt(2) if (dx != 0 and dy != 0) else 1.0
+                tentative_g = g_score[current] + step_cost
                 if voisin not in open_set:
                     open_set.append(voisin)
                 elif tentative_g >= g_score.get(voisin, float("inf")):

@@ -214,6 +214,10 @@ class Terminal:
         self._matrix_pending = False
         self.command_history = []
         self.history_index   = -1
+        self._ac_prefix      = None
+        self._ac_matches     = []
+        self._ac_index       = 0
+        self._last_ctx       = {}
 
     def _get_font(self):
         if self._font is None:
@@ -229,16 +233,21 @@ class Terminal:
             self.input_text    = ""
             self.scroll_offset = 0
             self.history_index = -1
+            self._ac_prefix    = None
+            self._ac_matches   = []
+            self._ac_index     = 0
 
     def handle_event(self, event, player, batiments, extra_ctx=None):
         if not self.visible:
             return False
+        self._last_ctx = extra_ctx or {}
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_RETURN:
                 self._executer(player, batiments, extra_ctx or {})
             elif event.key == pygame.K_BACKSPACE:
                 self.input_text = self.input_text[:-1]
                 self.history_index = -1
+                self._ac_prefix = None
             elif event.key == pygame.K_UP:
                 if self.command_history:
                     if self.history_index == -1:
@@ -246,6 +255,7 @@ class Terminal:
                     else:
                         self.history_index = min(self.history_index + 1, len(self.command_history) - 1)
                     self.input_text = self.command_history[len(self.command_history) - 1 - self.history_index]
+                    self._ac_prefix = None
             elif event.key == pygame.K_DOWN:
                 if self.history_index > 0:
                     self.history_index -= 1
@@ -253,18 +263,21 @@ class Terminal:
                 elif self.history_index == 0:
                     self.history_index = -1
                     self.input_text = ""
+                self._ac_prefix = None
             elif event.key == pygame.K_PAGEUP:
                 self.scroll_offset = min(self.scroll_offset + 5,
                                          max(0, len(self.historique) - 1))
             elif event.key == pygame.K_PAGEDOWN:
                 self.scroll_offset = max(0, self.scroll_offset - 5)
             elif event.key == pygame.K_TAB:
-                self._autocomplete()
+                reverse = bool(event.mod & pygame.KMOD_SHIFT)
+                self._autocomplete(reverse=reverse)
             else:
                 char = event.unicode
                 if char and char.isprintable() and char != "²":
                     self.input_text += char
                     self.history_index = -1
+                    self._ac_prefix = None
             return True
         return False
 
@@ -312,14 +325,72 @@ class Terminal:
             for ligne in resultat.split("\n"):
                 self._log(ligne)
 
-    def _autocomplete(self):
-        if not self.input_text:
+    def _autocomplete_candidates(self, parts: list[str], current_index: int) -> list[str]:
+        if current_index <= 0:
+            return list(COMMANDS.keys())
+        cmd = parts[0].lower()
+        if cmd in ("give", "set"):
+            return ["or", "money", "argent", "food", "vapeur"]
+        if cmd == "spawn":
+            return ["monster", "monstre", "slime", "goblin", "skeleton"]
+        if cmd == "event":
+            return ["raid", "wave", "night", "day"]
+        raid_mgr = self._last_ctx.get("raid_manager")
+        if cmd == "trigger_raid" and raid_mgr is not None:
+            return ["now"]
+        return []
+
+    def _autocomplete(self, reverse: bool = False):
+        raw = self.input_text
+        if not raw:
             return
-        matches = [k for k in COMMANDS if k.startswith(self.input_text.lower())]
-        if len(matches) == 1:
-            self.input_text = matches[0] + " "
-        elif matches:
-            self._log("  ".join(matches))
+
+        left = raw.rstrip("\n")
+        ends_with_space = left.endswith(" ")
+        parts = left.split()
+
+        if ends_with_space:
+            parts.append("")
+
+        if not parts:
+            return
+
+        current_index = len(parts) - 1
+        prefix = parts[current_index]
+        prefix_l = prefix.lower()
+        candidates = self._autocomplete_candidates(parts, current_index)
+
+        def _filter(cands):
+            if prefix_l == "":
+                return sorted(set(cands))
+            return sorted({c for c in cands if c.lower().startswith(prefix_l)})
+
+        matches = _filter(candidates)
+
+        ac_key = (tuple(parts[:-1]), prefix_l, tuple(matches))
+        if self._ac_prefix != ac_key:
+            self._ac_prefix = ac_key
+            self._ac_matches = matches
+            self._ac_index = 0
+            if len(matches) > 1:
+                self._log("  ".join(matches))
+
+        if not self._ac_matches:
+            return
+
+        if reverse:
+            self._ac_index = (self._ac_index - 1) % len(self._ac_matches)
+        else:
+            self._ac_index = (self._ac_index + 1) % len(self._ac_matches) if len(self._ac_matches) > 1 else 0
+
+        chosen = self._ac_matches[self._ac_index]
+        parts[current_index] = chosen
+
+        completed = " ".join(parts).rstrip()
+        if current_index == 0 and chosen in COMMANDS:
+            self.input_text = completed + " "
+        else:
+            self.input_text = completed
 
     def _log(self, msg: str):
         self.historique.append(msg)
