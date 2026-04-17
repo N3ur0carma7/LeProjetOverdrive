@@ -144,13 +144,19 @@ def handle_message_client(msg, client):
             return bat, "batiment"
 
         elif msg_type == "liste_batiments":
+            print("ok")
             liste_dicts = data["payload"]
             bats = [Batiment.from_dict(d) for d in liste_dicts]
             print(f"[LISTE BATIMENTS] reçue : {[str(b) for b in bats]}")
             return bats, "liste_batiments"
 
         elif msg_type == "liste_joueurs":
+            print("arriver")
             liste_dicts = data["payload"]
+            print(liste_dicts)
+            liste_dicts[0]["pos"] = tuple(liste_dicts[0]["pos"])
+            for i in range (len(liste_dicts[0]["path"])):
+                liste_dicts[0]["path"][i] = tuple(liste_dicts[0]["path"][i])
             plays = [Player.from_dict(d) for d in liste_dicts]
             print(f"[LISTE JOUEURS] reçue : {[str(b) for b in plays]}")
             return plays, "liste_joueurs"
@@ -164,17 +170,19 @@ def handle_message_client(msg, client):
 
 
 
-receive_callback = None
 
 
+result = None
 
 def receive_loop(client):
-    global recv_buffer
+    global recv_buffer, result, is_connected
+    is_connected = True
     while True:
         try:
             chunk = client.recv(4096)
             if not chunk:
                 print("[DISCONNECTED] serveur déconnecté")
+                is_connected = False
                 recv_buffer = b""
                 break
             recv_buffer += chunk
@@ -194,12 +202,11 @@ def receive_loop(client):
                 recv_buffer = recv_buffer[HEADER + msg_len:]
 
                 if msg == DISCONNECT_MESSAGE:
+                    is_connected = False
                     client.close()
                     return
 
                 result = handle_message_client(msg, client)
-                if receive_callback and result[0] is not None:
-                    receive_callback(result)  # transmet le message au jeu
 
         except OSError:
             recv_buffer = b""
@@ -207,6 +214,7 @@ def receive_loop(client):
 
 
 def send_server (msg, client):
+    global FORMAT
     message = msg.encode(FORMAT)
     msg_length = len(message)
     send_length = str(msg_length).encode(FORMAT)
@@ -266,6 +274,9 @@ def send_liste_batiments_client(liste_batiments, client):
 
 def send_liste_joueurs_client(liste_joueurs, client):
     payload = [j.to_dict() for j in liste_joueurs]
+    payload[0]["pos"] = list(payload[0]["pos"])
+    for i in range (len(payload[0]["path"] )):
+        payload[0]["path"][i] = list(payload[0]["path"][i])
     data = json.dumps({"type": "liste_joueurs", "payload": payload})
     send_server(data, client)
 
@@ -282,9 +293,9 @@ def disconnect():
             CLIENT = None
             recv_buffer = b""
 thread_loop = None
-
+is_connected = False
 def connection():
-    global CLIENT, recv_buffer, thread_loop
+    global CLIENT, recv_buffer, thread_loop, is_connected
     if CLIENT is not None:
         try:
             CLIENT.close()
@@ -304,6 +315,7 @@ def connection():
     ADDR = (SERVER, PORT)
     try:
         CLIENT.connect(ADDR)
+        is_connected = True
         print(f"[SERVER] {SERVER} connected")
         thread_loop = threading.Thread(target=receive_loop, args=(CLIENT,), daemon=True)
         thread_loop.start()

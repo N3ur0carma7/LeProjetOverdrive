@@ -4,7 +4,7 @@ import os
 import threading
 from multiplayer.serveur import *
 import multiplayer.client as client_module
-from multiplayer.client import send_list_client, receive_loop, send_batiment_client, send_liste_batiments_client, send_liste_joueurs_client, receive_callback
+from multiplayer.client import send_list_client, receive_loop, send_batiment_client, send_liste_batiments_client, send_liste_joueurs_client
 from core.Class.batiments import *
 import time
 import random
@@ -36,6 +36,7 @@ from screens.terminal import Terminal
 from screens.utils import collision, calculer_rects_icones, souris_vers_case, joueur_a_portee, dessiner_grille, dessiner_grille_overlay
 from screens.game_logic import synchroniser_npcs, calculer_production
 from screens.render import dessiner_monde, dessiner_hud
+from core.pve import RaidManager
 
 
 from core.Class.player import Player
@@ -171,6 +172,22 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
 
     terminal = Terminal()
 
+    # --- PVE : gestionnaire de raids ---
+    raid_manager = RaidManager(taille_case=TAILLE_CASE)
+
+    def _log_raid_start(n):
+        terminal._log(f"☠  RAID #{n} en approche ! Défendez-vous !")
+
+    def _log_wave(wave, nb):
+        terminal._log(f"  ⚔  Vague {wave}/{RaidManager.WAVES_PER_RAID} — {nb} monstre(s) spawné(s)")
+
+    def _log_raid_end():
+        terminal._log("✓ Raid terminé. Vous avez survécu !")
+
+    raid_manager.on_raid_start = _log_raid_start
+    raid_manager.on_wave_spawn = _log_wave
+    raid_manager.on_raid_end   = _log_raid_end
+
     ZOOM_MIN = 0.3
     ZOOM_MAX = 2.5
     VITESSE_ZOOM = 0.1
@@ -191,6 +208,8 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
     acc_food     = 0.0  # farm → food
     acc_vapeur   = 0.0  # generateur → vapeur
     save_done_timer = 0.0
+    attack_cooldown = 0.0
+    ATTACK_COOLDOWN_MAX = 0.6  # secondes entre chaque attaque
 
     ambient_playlist = list(range(len(sound.ambient_musics)))
     random.shuffle(ambient_playlist)
@@ -200,6 +219,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
     while en_cours:
         dt = horloge.tick(FPS) / 1000.0
         save_done_timer = max(0, save_done_timer - dt)
+        attack_cooldown = max(0.0, attack_cooldown - dt)
 
         # animation d'ouverture/fermeture de la barre de batiments
         cible_offset = 0 if barre_ouverte else HAUTEUR_BARRE
@@ -239,7 +259,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
                 terminal.toggle()
                 continue
 
-            if terminal.handle_event(event, player, batiments):
+            if terminal.handle_event(event, player, batiments, extra_ctx={"raid_manager": raid_manager}):
                 continue
 
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
@@ -325,8 +345,58 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
                             break
 
 
+                # --- Attaque des monstres au clic gauche ---
+                monster_clicked = False
+                if not clic_barre and raid_manager is not None and attack_cooldown <= 0.0:
+                    # Coordonnées dans l'espace monde (en tenant compte du zoom et de la caméra)
+                    world_sx = camera_x + sx / zoom
+                    world_sy = camera_y + sy / zoom
+                    # Utilise le rect écran (non zoomé) pour la détection de clic
+                    for m in raid_manager.monsters:
+                        if not m.alive:
+                            continue
+                        # Calcul de la distance joueur-monstre (portée d'attaque)
+                        dist_joueur = ((player.pos[0] - m.x) ** 2 + (player.pos[1] - m.y) ** 2) ** 0.5
+                        PORTEE_ATTAQUE_JOUEUR = 80  # px — réduit pour le hand_cannon (corps à corps)
+                        if dist_joueur > PORTEE_ATTAQUE_JOUEUR:
+                            continue
+                        # Rect en coordonnées écran (sans zoom appliqué sur la caméra)
+                        m_screen_rect = m.get_screen_rect(camera_x, camera_y)
+                        # Adapter à l'écran zoomé
+                        zoomed_rect = pygame.Rect(
+                            int(m_screen_rect.x * zoom),
+                            int(m_screen_rect.y * zoom),
+                            int(m_screen_rect.width * zoom),
+                            int(m_screen_rect.height * zoom),
+                        )
+                        # Agrandir la hitbox pour faciliter le clic
+                        zoomed_rect.inflate_ip(12, 12)
+                        if zoomed_rect.collidepoint(sx, sy):
+                            # Déclencher l'animation d'attaque hand_cannon
+                            player.trigger_attack_anim()
+                            # Orienter le joueur vers le monstre
+                            if m.x < player.pos[0]:
+                                player.direction = "left"
+                            else:
+                                player.direction = "right"
+                            # Calcul des dégâts avec critique
+                            import random as _rnd
+                            dmg = player.raw_damage
+                            is_crit = _rnd.randint(1, 100) <= player.crit_chance
+                            if is_crit:
+                                dmg = int(dmg * (1 + player.crit_damage / 100))
+                            m.take_damage(dmg)
+                            attack_cooldown = ATTACK_COOLDOWN_MAX
+                            # Afficher le chiffre de dégâts
+                            from core.pve import DamageNumber
+                            raid_manager.damage_numbers.append(
+                                DamageNumber(m.x, m.y - 20, dmg, is_crit)
+                            )
+                            monster_clicked = True
+                            
+
                 # Placement du bâtiment sur la grille
-                if not clic_barre and sy < HAUTEUR_ECRAN - HAUTEUR_BARRE:
+                if not clic_barre and not monster_clicked and sy < HAUTEUR_ECRAN - HAUTEUR_BARRE:
                     mx = camera_x + sx / zoom
                     my = camera_y + sy / zoom
 
@@ -396,6 +466,29 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
         player.update(TAILLE_CASE, dt)
         player.update_anim(dt)
 
+        # --- Mort du joueur ---
+        if player.hp <= 0:
+            from screens.game_over import afficher_game_over
+            pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
+            result = afficher_game_over(ecran)
+            if result == "restart":
+                # Réinitialiser le joueur et le raid
+                player.hp = player.hp_max
+                player.path = []
+                player.pos = (TAILLE_CASE * 5, TAILLE_CASE * 5)
+                raid_manager.monsters.clear()
+                raid_manager.damage_numbers.clear()
+                raid_manager._raid_active = False
+                raid_manager._auto_timer = 30.0
+                continue
+            else:
+                stop_event.set()
+                sound.stop_ambient()
+                return False
+
+        # PVE update
+        raid_manager.update(players, dt)
+
         ecran.fill((0, 0, 0))
 
         largeur_vue = dims[0] / zoom
@@ -407,7 +500,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
 
         dessiner_grille(surface_monde, camera_x, camera_y, dims, 0, zoom, herbe, TAILLE_CASE)
 
-        dessiner_monde(surface_monde, batiments, images_batiments, camera_x, camera_y, TAILLE_CASE, batiment_selectionne, TYPES_BATIMENTS, player, npcs, image_pnj, dt, zoom)
+        dessiner_monde(surface_monde, batiments, images_batiments, camera_x, camera_y, TAILLE_CASE, batiment_selectionne, TYPES_BATIMENTS, player, npcs, image_pnj, dt, zoom, raid_manager=raid_manager)
 
         surface_affichee = pygame.transform.scale(
             surface_monde,
@@ -417,7 +510,31 @@ def boucle_jeu(ecran, horloge, FPS, online: bool, dev_mode: bool = False):
         ecran.blit(surface_affichee, (0, 0))
         dessiner_grille_overlay(ecran, camera_x, camera_y, dims, 0, zoom, TAILLE_CASE)
 
-        dessiner_hud(ecran, dims, HAUTEUR_BARRE, rects_icones, batiment_selectionne, images_batiments, TYPES_BATIMENTS, TAILLE_ICONE, player, font_argent, hud_or_img, hud_food_img, hud_vapeur_img, save_done_img, save_done_timer, barre_ouverte, int(slide_offset), btn_batiments_rect, skill_btn_rect)
+        # --- Curseur épée si un monstre est à portée sous la souris ---
+        mx_cur, my_cur = pygame.mouse.get_pos()
+        hover_monster = False
+        if raid_manager is not None:
+            for m in raid_manager.monsters:
+                if not m.alive:
+                    continue
+                dist_joueur = ((player.pos[0] - m.x) ** 2 + (player.pos[1] - m.y) ** 2) ** 0.5
+                if dist_joueur > 80:
+                    continue
+                m_rect = m.get_screen_rect(camera_x, camera_y)
+                zoomed_m_rect = pygame.Rect(
+                    int(m_rect.x * zoom), int(m_rect.y * zoom),
+                    int(m_rect.width * zoom), int(m_rect.height * zoom)
+                )
+                zoomed_m_rect.inflate_ip(12, 12)
+                if zoomed_m_rect.collidepoint(mx_cur, my_cur):
+                    hover_monster = True
+                    break
+        if hover_monster:
+            pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_CROSSHAIR)
+        else:
+            pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
+
+        dessiner_hud(ecran, dims, HAUTEUR_BARRE, rects_icones, batiment_selectionne, images_batiments, TYPES_BATIMENTS, TAILLE_ICONE, player, font_argent, hud_or_img, hud_food_img, hud_vapeur_img, save_done_img, save_done_timer, barre_ouverte, int(slide_offset), btn_batiments_rect, skill_btn_rect, raid_manager=raid_manager)
 
         terminal.draw(ecran, dt)
 

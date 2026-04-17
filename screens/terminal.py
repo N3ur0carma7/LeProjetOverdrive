@@ -178,6 +178,12 @@ def cmd_event(args, player, batiments, **ctx):
         return ctx["trigger_event_fn"](nom)
     return f"(Events non encore implementes) event '{nom}'"
 
+def cmd_trigger_raid(args, player, batiments, **ctx):
+    raid_mgr = ctx.get("raid_manager")
+    if raid_mgr is None:
+        return "Gestionnaire PVE introuvable."
+    return raid_mgr.trigger_raid()
+
 
 COMMANDS: dict[str, tuple] = {
     "godlike":  (cmd_godlike,  "Donne 10 000 de chaque ressource"),
@@ -187,8 +193,9 @@ COMMANDS: dict[str, tuple] = {
     "heal":     (cmd_heal,     "Restaure les HP au max"),
     "clear":    (cmd_clear,    "Efface l'historique"),
     "help":     (cmd_help,     "Liste les commandes"),
-    "spawn":    (cmd_spawn,    "spawn <ennemi> [qte]  (PVE)"),
-    "event":    (cmd_event,    "event <nom>  (Events)"),
+    "spawn":        (cmd_spawn,        "spawn <ennemi> [qte]  (PVE)"),
+    "event":        (cmd_event,        "event <nom>  (Events)"),
+    "trigger_raid": (cmd_trigger_raid, "Declenche un raid PVE immediatement"),
 }
 
 

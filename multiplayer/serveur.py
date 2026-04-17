@@ -5,13 +5,13 @@ import time
 import ast
 from core.Class.batiments import *
 from core.Class.player import *
-from multiplayer.client import CLIENT
-
+import screens.jeu as jeu
 FORMAT = "utf-8"
 HEADER = 64
 PORT = 5050
 DISCONNECT = "[DISCONNECT]"
 clients = {}
+clients_indice = {}
 SERVER = 0
 STOPSEARCH = False
 def search_client():
@@ -58,10 +58,34 @@ def str_to_tuple_key(dic):
     for k, v in dic.items():
         result[tuple_from_str(k)] = v
     return result
+def pos(client):
+    global clients
+    for i in clients.keys():
+        send_float_server(float(number_connected), clients[i])
+    send_int_server(number_connected - 1, client)
+
 
 def handle_client(client, addr):
+    global clients
     print(f"[NEW CLIENT] {addr} connected\n")
     send_dict_server({"server": "hello client"}, client)
+    if number_connected > 1:
+        for sujet2 in clients.keys():
+            if jeu.batiments != []:
+                payload = [b.to_dict() for b in jeu.batiments]  # message = liste de Batiment
+                data = json.dumps({"type": "liste_batiments", "payload": payload})
+                send_client(data, clients[sujet2])
+    if jeu.TAILLE_CASE is not None:
+        player = Player()
+        player.pos = (jeu.TAILLE_CASE / 2, jeu.TAILLE_CASE / 2)
+        jeu.players.append(player)
+    for sujet in clients.keys():
+        payload = [p.to_dict() for p in jeu.players]
+        payload[0]["pos"] = list(payload[0]["pos"])
+        for j in range(len(payload[0]["path"])):
+            payload[0]["path"][j] = list(payload[0]["path"][j])
+        data = json.dumps({"type": "liste_joueurs", "payload": payload})
+        send_client(data, clients[sujet])
     while not stop_event.is_set():
         try:
             msg_len_str = client.recv(HEADER).decode(FORMAT).strip()
@@ -73,6 +97,9 @@ def handle_client(client, addr):
                 break  # ← break au lieu de connected = False
             else:
                 message, type = handle_message_recieved(msg, addr)
+                if type == "str" and message == "pos":
+                    pos(client)
+
                 for i in clients.keys():
                     if i != addr:
                             if type == "list":
@@ -101,11 +128,14 @@ def handle_client(client, addr):
                                 send_client(data, clients[i])
                             elif type == "liste_joueurs":
                                 payload = [p.to_dict() for p in message]
+                                payload[0]["pos"] = list(payload[0]["pos"])
+                                for j in range (len(payload[0]["path"])):
+                                    payload[0]["path"][j] = list(payload[0]["path"][j])
                                 data = json.dumps({"type": "liste_joueurs", "payload": payload})
                                 send_client(data, clients[i])
-        except Exception:
-            print("oups")
-            break
+
+        except Exception as e:
+            pass
     if addr in clients:
         del clients[addr]
     disconnect(client)
@@ -166,6 +196,9 @@ def handle_message_recieved (msg, addr):
         
         elif msg_type == "liste_joueurs":
             liste_dicts = data["payload"]
+            liste_dicts[0]["pos"] = tuple(liste_dicts[0]["pos"])
+            for i in range (len(liste_dicts[0]["path"])):
+                liste_dicts[0]["path"][i] = tuple(liste_dicts[0]["path"][i])
             plays = [Player.from_dict(d) for d in liste_dicts]
             print(f"[LISTE JOUEURS] {addr} : {[str(b) for b in plays]}")
             return plays, "liste_joueurs"
@@ -174,10 +207,21 @@ def handle_message_recieved (msg, addr):
         return ""
 
 def disconnect (client):
+    global clients, clients_indice
     print(f"[STOP] client disconnected")
+    print(clients_indice[client])
+    jeu.players.pop(clients_indice[client])
+    for sujet in clients.keys():
+        payload = [p.to_dict() for p in jeu.players]
+        payload[0]["pos"] = list(payload[0]["pos"])
+        for j in range(len(payload[0]["path"])):
+            payload[0]["path"][j] = list(payload[0]["path"][j])
+        data = json.dumps({"type": "liste_joueurs", "payload": payload})
+        send_client(data, clients[sujet])
     client.close()
 
 def send_client (msg, client):
+    global FORMAT
     message = msg.encode(FORMAT)
     msg_length = len(message)
     send_length = str(msg_length).encode(FORMAT)
@@ -240,7 +284,10 @@ def stop_server():
         client.close()
     STOPSEARCH = True
 
+number_connected = 0
+
 def start(server):
+    global number_connected
     end = False
     broadcast_thread = threading.Thread(target=search_client, daemon=True)
     broadcast_thread.start()
@@ -252,6 +299,7 @@ def start(server):
         except OSError:
             break
         clients[addr] = client
+        clients_indice[client] = number_connected
         number_connected = len(clients)
         print(f"[ACTIVE CLIENTS] {number_connected}\n")
         client_thread = threading.Thread(target=handle_client, args=(client, addr))

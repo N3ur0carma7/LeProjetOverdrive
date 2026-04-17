@@ -1,167 +1,158 @@
 import math
-import random
 import pygame
-import heapq
 
-_COL_BOUNDS = [(18,71),(88,148),(155,221),(232,294),(306,363),(375,430)]
-_ROW_BOUNDS = [(32,109),(173,251),(305,388),(428,511)]
+# ---------------------------------------------------------------------------
+# Spritesheets Mechanic Mike
+# Chaque frame fait 80px de large x 64px de haut.
+# Les images sont des bandes horizontales de frames.
+# ---------------------------------------------------------------------------
 
-def _build_sprite_rects():
-    rects = {}
-    for row_idx, (ry1, ry2) in enumerate(_ROW_BOUNDS):
-        rects[row_idx] = []
-        for col_idx, (cx1, cx2) in enumerate(_COL_BOUNDS):
-            rects[row_idx].append(pygame.Rect(cx1, ry1, cx2 - cx1, ry2 - ry1))
-    return rects
+FRAME_W = 80   # largeur d'une frame
+FRAME_H = 64   # hauteur d'une frame
 
-_DIR_ROW = {
-    "down":  0,
-    "up":    1,
-    "right": 2,
-    "left":  3,
+# Nombre de frames par animation (width / 80)
+ANIM_FRAMES = {
+    "idle":         7,   # 560 / 80
+    "run":          6,   # 480 / 80
+    "hand_cannon": 10,   # 800 / 80
+    "hit":          5,   # 400 / 80
+    "death":        7,   # 560 / 80
+}
+
+# FPS par animation
+ANIM_FPS = {
+    "idle":        8,
+    "run":        10,
+    "hand_cannon": 12,
+    "hit":         10,
+    "death":        8,
 }
 
 
 class Player:
-    _spritesheet = None
-    _sprite_rects = None
+    _sheets: dict = {}   # {name: pygame.Surface}
 
-    START_MONEY = 1500
-    START_FOOD = 100
+    START_MONEY  = 1500
+    START_FOOD   = 100
     START_VAPEUR = 40
 
     @classmethod
     def load_sprites(cls):
-        if cls._spritesheet is None:
-            cls._spritesheet = pygame.image.load("assets/player.png").convert_alpha()
-            cls._sprite_rects = _build_sprite_rects()
+        if cls._sheets:
+            return
+        for name in ANIM_FRAMES:
+            cls._sheets[name] = pygame.image.load(
+                f"assets/player_sprites/{name}.png"
+            ).convert_alpha()
 
+    # ------------------------------------------------------------------
     def __init__(self):
-        self.hp_max = 100
-        self.hp = 100
-        self.crit_chance = 20
-        self.crit_damage = 10
-        self.raw_damage = 1
-        self.defense = 0
+        self.hp_max       = 100
+        self.hp           = 100
+        self.crit_chance  = 20
+        self.crit_damage  = 20
+        self.raw_damage   = 10
+        self.defense      = 0
         self.health_regen = 1
-        self.money = Player.START_MONEY
-        self.food = Player.START_FOOD
+        self.money  = Player.START_MONEY
+        self.food   = Player.START_FOOD
         self.vapeur = Player.START_VAPEUR
-        self.pos = (0, 0)
-        self.path = []
+        self.pos    = (0, 0)
+        self.path   = []
 
-        # speed est maintenant en pixels/seconde (7 px/frame * 60 fps = 420 px/s)
-        self.speed = 420
-        self.size = 40
+        self.speed = 420   # px/s
+        self.size  = 40
 
         # Animation
-        self.direction = "down"   # dernière direction de déplacement
-        self.anim_frame = 0       # frame courante (0-5)
-        self.anim_timer = 0.0     # accumulateur en secondes
-        self.anim_fps = 8         # frames par seconde d'animation
-        self.is_moving = False
+        self.direction  = "right"   # "right" | "left"
+        self.anim_state = "idle"
+        self.anim_frame = 0
+        self.anim_timer = 0.0
+        self.is_moving  = False
+
+        # Attaque
+        self._attack_anim_active   = False
+        self._attack_anim_timer    = 0.0
+        self._attack_anim_duration = ANIM_FRAMES["hand_cannon"] / ANIM_FPS["hand_cannon"]
 
         self.sprite_height = 72
 
-    def hurt(self, raw_damage: int) -> float | None:
-        # Inflige des dégâts au joueur
+    # ------------------------------------------------------------------
+    def trigger_attack_anim(self):
+        """Declenche l'animation hand_cannon pour un cycle complet."""
+        self._attack_anim_active = True
+        self._attack_anim_timer  = self._attack_anim_duration
+        self.anim_state  = "hand_cannon"
+        self.anim_frame  = 0
+        self.anim_timer  = 0.0
+
+    def hurt(self, raw_damage: int):
         damage = raw_damage / (self.defense * 0.05 + 1)
         self.hp -= damage
         if self.hp <= 0:
             return None
-        else:
-            return damage
+        return damage
 
-    def heuristique(self, start: tuple, dest: tuple):
-        # Calcule la distance heuristique
+    # ------------------------------------------------------------------
+    # Pathfinding
+    # ------------------------------------------------------------------
+    def heuristique(self, start, dest):
         return abs(start[0] - dest[0]) + abs(start[1] - dest[1])
 
     def reconstruire_path(self, came_from, current):
-
         chemin = [current]
-
         while current in came_from:
             current = came_from[current]
             chemin.append(current)
         chemin.reverse()
         return chemin
 
-    def a_star(self, dest: tuple, taille_case: int):
-        # Calcule le chemin avec A*
-        start = (
-            int(self.pos[0] // taille_case),
-            int(self.pos[1] // taille_case)
-        )
-        open_set = [start]
+    def a_star(self, dest, taille_case):
+        start = (int(self.pos[0] // taille_case), int(self.pos[1] // taille_case))
+        open_set   = [start]
         closed_set = set()
-
-        came_from = dict()
-        g_score = dict()
-        f_score = dict()
-
-        g_score[start] = 0
-        f_score[start] = self.heuristique(start, dest)
+        came_from  = {}
+        g_score    = {start: 0}
+        f_score    = {start: self.heuristique(start, dest)}
 
         while open_set:
-            current = min(open_set, key=lambda case: f_score.get(case, float('inf')))
-
+            current = min(open_set, key=lambda c: f_score.get(c, float("inf")))
             if current == dest:
                 self.path = self.reconstruire_path(came_from, current)
                 return True
-
             open_set.remove(current)
             closed_set.add(current)
-
-            voisins = [
-                (current[0] + 1, current[1]),
-                (current[0], current[1] + 1),
-                (current[0] - 1, current[1]),
-                (current[0], current[1] - 1),
-            ]
-
-            for voisin in voisins:
-
+            for voisin in [(current[0]+1,current[1]),(current[0],current[1]+1),
+                           (current[0]-1,current[1]),(current[0],current[1]-1)]:
                 if voisin in closed_set:
                     continue
-
                 tentative_g = g_score[current] + 1
                 if voisin not in open_set:
                     open_set.append(voisin)
-                elif tentative_g >= g_score[voisin]:
+                elif tentative_g >= g_score.get(voisin, float("inf")):
                     continue
-
                 came_from[voisin] = current
-
-                g_score[voisin] = tentative_g
-                f_score[voisin] = g_score[voisin] + self.heuristique(voisin, dest)
+                g_score[voisin]   = tentative_g
+                f_score[voisin]   = tentative_g + self.heuristique(voisin, dest)
         return False
 
-    def update(self, taille_case: int, dt: float = 1/60):
-        """Met à jour la position du joueur.
-        dt : delta time en secondes (indépendant des FPS).
-        """
+    # ------------------------------------------------------------------
+    def update(self, taille_case, dt=1/60):
         if not self.path:
             self.is_moving = False
             return
 
         next_case = self.path[0]
-
-        target_x = next_case[0] * taille_case + taille_case / 2
-        target_y = next_case[1] * taille_case + taille_case / 2
-
+        target_x  = next_case[0] * taille_case + taille_case / 2
+        target_y  = next_case[1] * taille_case + taille_case / 2
         dx = target_x - self.pos[0]
         dy = target_y - self.pos[1]
-
         distance = math.hypot(dx, dy)
 
         if abs(dx) >= abs(dy):
             self.direction = "right" if dx > 0 else "left"
-        else:
-            self.direction = "down" if dy > 0 else "up"
 
         self.is_moving = True
-
-        # Déplacement en pixels/seconde * dt
         step = self.speed * dt
 
         if distance < step:
@@ -171,78 +162,90 @@ class Player:
                 self.is_moving = False
                 self.anim_frame = 0
                 self.anim_timer = 0.0
-                self.direction = "down"
             return
 
         dx /= distance
         dy /= distance
         self.pos = (self.pos[0] + dx * step, self.pos[1] + dy * step)
 
-    def update_anim(self, dt: float):
-        if self.is_moving:
-            self.anim_timer += dt
-            if self.anim_timer >= 1.0 / self.anim_fps:
+    # ------------------------------------------------------------------
+    def update_anim(self, dt):
+        if self._attack_anim_active:
+            self._attack_anim_timer -= dt
+            if self._attack_anim_timer <= 0:
+                self._attack_anim_active = False
+                self.anim_state = "run" if self.is_moving else "idle"
+                self.anim_frame = 0
                 self.anim_timer = 0.0
-                self.anim_frame = (self.anim_frame + 1) % len(_COL_BOUNDS)
-        else:
-            #idle
-            self.anim_frame = 0
-            self.anim_timer = 0.0
-            self.direction = "down"
+            else:
+                self._advance_frame("hand_cannon", dt)
+            return
 
-    def draw_player(self, surface, camera_x, camera_y) -> bool:
-        # Dessine le joueur sur la surface
+        self.anim_state = "run" if self.is_moving else "idle"
+        self._advance_frame(self.anim_state, dt)
+
+    def _advance_frame(self, state, dt):
+        fps       = ANIM_FPS[state]
+        nb_frames = ANIM_FRAMES[state]
+        self.anim_timer += dt
+        if self.anim_timer >= 1.0 / fps:
+            self.anim_timer = 0.0
+            self.anim_frame = (self.anim_frame + 1) % nb_frames
+        self.anim_state = state
+
+    # ------------------------------------------------------------------
+    def draw_player(self, surface, camera_x, camera_y):
         Player.load_sprites()
 
-        row = _DIR_ROW[self.direction]
-        src_rect = Player._sprite_rects[row][self.anim_frame]
+        sheet = Player._sheets[self.anim_state]
+        frame = min(self.anim_frame, ANIM_FRAMES[self.anim_state] - 1)
 
-        scale = self.sprite_height / src_rect.height
-        dst_w = int(src_rect.width * scale)
+        # Rect source : chaque frame fait FRAME_W x FRAME_H
+        src_rect = pygame.Rect(frame * FRAME_W, 0, FRAME_W, FRAME_H)
+
+        scale = self.sprite_height / FRAME_H
+        dst_w = int(FRAME_W * scale)
         dst_h = self.sprite_height
 
-        sub = Player._spritesheet.subsurface(src_rect)
+        sub    = sheet.subsurface(src_rect)
         scaled = pygame.transform.scale(sub, (dst_w, dst_h))
 
+        if self.direction == "left":
+            scaled = pygame.transform.flip(scaled, True, False)
+
         draw_x = int(self.pos[0] - camera_x) - dst_w // 2
-        draw_y = int(self.pos[1] - camera_y) - dst_h
+        draw_y = int(self.pos[1] - camera_y) - dst_h // 2
 
         surface.blit(scaled, (draw_x, draw_y))
         return True
 
+    # ------------------------------------------------------------------
     def to_dict(self):
         return {
-            "hp_max": self.hp_max,
-            "hp": self.hp,
-            "crit_chance": self.crit_chance,
-            "crit_damage" : self.crit_damage,
-            "raw_damage" : self.raw_damage,
-            "defense" : self.defense,
-            "health_regen" : self.health_regen,
-            "money": self.money,
-            "food": self.food,
-            "vapeur": self.vapeur,
-            "pos": self.pos,
-            "path": self.path,
-            "speed": self.speed,
-            "size": self.size
+            "hp_max": self.hp_max, "hp": self.hp,
+            "crit_chance": self.crit_chance, "crit_damage": self.crit_damage,
+            "raw_damage": self.raw_damage, "defense": self.defense,
+            "health_regen": self.health_regen, "money": self.money,
+            "food": self.food, "vapeur": self.vapeur,
+            "pos": self.pos, "path": self.path,
+            "speed": self.speed, "size": self.size,
         }
 
     @classmethod
     def from_dict(cls, d):
-        obj = cls(d["hp_max"], d["hp"], d["crit_chance"], d["crit_damage"], d["raw_damage"], d["defense"], d["health_regen"], d["money"], d["pos"], d["path"], d["speed"], d["size"])
-        obj.hp_max = d.get("hp_max", 100)
-        obj.hp = d.get("hp", 100)
-        obj.crit_chance = d.get("crit_chance", 20)
-        obj.crit_damage = d.get("crit_damage", 10)
-        obj.raw_damage = d.get("raw_damage", 1)
-        obj.defense = d.get("defense", 0)
-        obj.health_regen = d.get("health_regen", 1)
-        obj.money = d.get("money", 5000)
-        obj.food = d.get("food", 0)
-        obj.vapeur = d.get("vapeur", 0)
-        obj.pos = d.get("pos", (0, 0))
-        obj.path = d.get("path", [])
-        obj.speed = d.get("speed", 420)
-        obj.size = d.get("size", 40)
+        obj = cls()
+        obj.hp_max       = d.get("hp_max",       100)
+        obj.hp           = d.get("hp",            100)
+        obj.crit_chance  = d.get("crit_chance",    20)
+        obj.crit_damage  = d.get("crit_damage",    10)
+        obj.raw_damage   = d.get("raw_damage",      1)
+        obj.defense      = d.get("defense",         0)
+        obj.health_regen = d.get("health_regen",    1)
+        obj.money        = d.get("money",        5000)
+        obj.food         = d.get("food",            0)
+        obj.vapeur       = d.get("vapeur",          0)
+        obj.pos          = d.get("pos",          (0, 0))
+        obj.path         = d.get("path",           [])
+        obj.speed        = d.get("speed",         420)
+        obj.size         = d.get("size",           40)
         return obj
