@@ -26,7 +26,7 @@ ambient_musics = [
 def play_ambient(index=0, loop=-1):
     if 0 <= index < len(ambient_musics):
         pygame.mixer.music.load(ambient_musics[index])
-        pygame.mixer.music.set_volume(0.8)
+        pygame.mixer.music.set_volume(0.1)
         pygame.mixer.music.play(loop)
 
 def stop_ambient():

@@ -9,6 +9,7 @@ from multiplayer.client import send_list_client, receive_loop, send_batiment_cli
 from core.Class.batiments import *
 import time
 import random
+from screens.environment import CloudManager
 
 stop_event = threading.Event()
 batiments = []
@@ -155,6 +156,13 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
     hud_food_img   = pygame.image.load("assets/food.png").convert_alpha()
     hud_vapeur_img = pygame.image.load("assets/vapeur.png").convert_alpha()
     save_done_img = pygame.image.load("assets/save_done.png").convert_alpha()
+
+    cloud_manager = CloudManager(
+        -4000, 4000,
+        -4000, 4000
+    )
+    cloud_manager.load_images()
+    cloud_manager.generate_clouds(count=80)
 
     is_new_game = not os.path.exists("save/save.json")
     if not dev_mode and os.path.exists("save/save.json"):
@@ -308,6 +316,8 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
                 ambient_delay_timer = 3.0 
 
         acc_argent, acc_food, acc_vapeur = calculer_production(batiments, players[indice], dt, acc_argent, acc_food, acc_vapeur)
+
+        cloud_manager.update(dt)
 
 
         for event in pygame.event.get():
@@ -570,7 +580,11 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
 
         dessiner_grille(surface_monde, camera_x, camera_y, dims, 0, zoom, herbe, TAILLE_CASE)
 
-        dessiner_monde(surface_monde, batiments, images_batiments, camera_x, camera_y, TAILLE_CASE, batiment_selectionne, TYPES_BATIMENTS, player, npcs, image_pnj, dt, zoom, raid_manager=raid_manager)
+        cloud_manager.draw(surface_monde, camera_x, camera_y)
+
+        dessiner_monde(surface_monde, batiments, images_batiments, camera_x, camera_y, TAILLE_CASE,
+                       batiment_selectionne, TYPES_BATIMENTS, player, npcs, image_pnj, dt, zoom,
+                       raid_manager=raid_manager)
 
         if surface_monde_size == (dims[0], dims[1]):
             surface_affichee = surface_monde
