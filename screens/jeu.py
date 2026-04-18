@@ -19,11 +19,10 @@ dt = 0.0
 def on_message_recu(TAILLE_CASE):
     global batiments, players, indice, connected
     messageprec = None
+    if client_module.CLIENT is not None:
+        send_str_client("pos", client_module.CLIENT)
     while not stop_event.is_set():
         try:
-            if client_module.CLIENT is not None:
-                send_str_client("pos", client_module.CLIENT)
-
             if client_module.result is not None:
                 message, type = client_module.result
                 if message != messageprec:
@@ -305,7 +304,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
                 if current_playlist_index >= len(ambient_playlist):
                     random.shuffle(ambient_playlist)
                     current_playlist_index = 0
-                ambient_delay_timer = 3.0 
+                ambient_delay_timer = 3.0
 
         acc_argent, acc_food, acc_vapeur = calculer_production(batiments, players[indice], dt, acc_argent, acc_food, acc_vapeur)
 
@@ -460,7 +459,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
                                 DamageNumber(m.x, m.y - 20, dmg, is_crit)
                             )
                             monster_clicked = True
-                            
+
 
                 # Placement du bâtiment sur la grille
                 limite_ui = HAUTEUR_ECRAN - (HAUTEUR_BARRE - slide_offset)
@@ -469,12 +468,15 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
                     my = camera_y + sy / zoom
 
                     if batiment_selectionne is not None:
-                        grid_x = int(mx // TAILLE_CASE) - 1
-                        grid_y = int(my // TAILLE_CASE) - 1
+                        case_x = int(mx // TAILLE_CASE)
+                        case_y = int(my // TAILLE_CASE)
 
                         type_batiment = TYPES_BATIMENTS[batiment_selectionne]
-                        image_ref = images_batiments[type_batiment][1]
-                        nouveau = Batiment(type_batiment, grid_x, grid_y)
+                        nouveau = Batiment(type_batiment, case_x, case_y)
+                        grid_x = case_x - (nouveau.largeur // 2)
+                        grid_y = case_y - (nouveau.hauteur // 2)
+                        nouveau.x = grid_x
+                        nouveau.y = grid_y
 
                         cout = Batiment.DATA[type_batiment][1]["cout"]
 

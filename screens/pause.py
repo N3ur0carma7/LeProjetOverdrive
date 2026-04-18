@@ -27,14 +27,24 @@ def menu_pause(ecran, horloge, FPS, buildings, online_data, player: Player, scre
     def btn_path(name, state):
         return os.path.join("assets", "buttons", "menu", f"{name}_{state}.png")
 
+    import core.sounds as sounds
+
+    music_on = pygame.mixer.music.get_busy()
+
     BTN_SPACING = 100
     BTN_H = 70
     BTN_W = 300
-    btn_y_start = HAUTEUR_ECRAN // 2 - 130
+    btn_y_start = HAUTEUR_ECRAN // 2 - 180
     panel_w = BTN_W + 60
-    panel_h = 300
+    panel_h = 550
     panel_x = LARGEUR_ECRAN // 2 - panel_w // 2
-    panel_y = HAUTEUR_ECRAN // 2 - 140
+    panel_y = HAUTEUR_ECRAN // 2 - 240
+
+    def get_music_btn_images():
+        return (btn_path("Musique_on", "normal"), btn_path("Musique_on", "hover")) if music_on else (btn_path("Musique_off", "normal"), btn_path("Musique_off", "hover"))
+
+    musique_btn = BoutonImage(LARGEUR_ECRAN//2 - BTN_W//2, btn_y_start + 2 * BTN_SPACING, BTN_W, BTN_H,
+                get_music_btn_images()[0], get_music_btn_images()[1])
 
     # boutons
     boutons = [
@@ -42,9 +52,10 @@ def menu_pause(ecran, horloge, FPS, buildings, online_data, player: Player, scre
                     btn_path("Menu_principal", "normal"), btn_path("Menu_principal", "hover")),
         BoutonImage(LARGEUR_ECRAN//2 - BTN_W//2, btn_y_start + 1 * BTN_SPACING, BTN_W, BTN_H,
                     btn_path("Sauvegarder", "normal"), btn_path("Sauvegarder", "hover")),
-        BoutonImage(LARGEUR_ECRAN//2 - BTN_W//2, btn_y_start + 2 * BTN_SPACING, BTN_W, BTN_H,
+        BoutonImage(LARGEUR_ECRAN//2 - BTN_W//2, btn_y_start + 3 * BTN_SPACING, BTN_W, BTN_H,
                     btn_path("Quitter", "normal"), btn_path("Quitter", "hover"))
     ]
+    music_btn_changed = False
     while en_pause:
         horloge.tick(FPS)
 
@@ -70,6 +81,13 @@ def menu_pause(ecran, horloge, FPS, buildings, online_data, player: Player, scre
                         return False
                     print("Sauvegarde réussite, retour au jeu")
                     return "jeu_save_done"
+                if musique_btn.clic():
+                    if music_on:
+                        pygame.mixer.music.stop()
+                    else:
+                        sounds.play_ambient(0)
+                    music_on = not music_on
+                    music_btn_changed = True
                 if boutons[2].clic():
                     if online_data and CLIENT is not None:
                         disconnect()
@@ -109,5 +127,11 @@ def menu_pause(ecran, horloge, FPS, buildings, online_data, player: Player, scre
         # afficher les boutons
         for btn in boutons:
             btn.afficher(ecran)
+        musique_btn.afficher(ecran)
+
+        if music_btn_changed:
+            musique_btn = BoutonImage(LARGEUR_ECRAN//2 - BTN_W//2, btn_y_start + 2 * BTN_SPACING, BTN_W, BTN_H,
+                        get_music_btn_images()[0], get_music_btn_images()[1])
+            music_btn_changed = False
 
         pygame.display.flip()

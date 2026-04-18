@@ -48,6 +48,10 @@ def dessiner_monde(surface_monde, batiments, images_batiments, camera_x, camera_
         case = souris_vers_case((sx, sy), camera_x, camera_y, zoom, TAILLE_CASE)
         type_batiment = TYPES_BATIMENTS[batiment_selectionne]
         test_batiment = Batiment(type_batiment, case[0], case[1])
+        grid_x = case[0] - (test_batiment.largeur // 2)
+        grid_y = case[1] - (test_batiment.hauteur // 2)
+        test_batiment.x = grid_x
+        test_batiment.y = grid_y
         footprint_w_px = test_batiment.largeur * TAILLE_CASE
         footprint_h_px = test_batiment.hauteur * TAILLE_CASE
         image = _get_scaled_batiment_image(
@@ -56,11 +60,11 @@ def dessiner_monde(surface_monde, batiments, images_batiments, camera_x, camera_
         image_fantome = image.copy()
         if collision(batiments, test_batiment):
             image_fantome.fill((255, 0, 0, 120), special_flags=pygame.BLEND_RGBA_MULT)
-        elif not joueur_a_portee(case, player, TAILLE_CASE, distance_max=10, largeur=test_batiment.largeur, hauteur=test_batiment.hauteur):
+        elif not joueur_a_portee((grid_x, grid_y), player, TAILLE_CASE, distance_max=10, largeur=test_batiment.largeur, hauteur=test_batiment.hauteur):
             image_fantome.fill((255, 140, 0, 120), special_flags=pygame.BLEND_RGBA_MULT)
 
-        x = case[0] * TAILLE_CASE - camera_x + (footprint_w_px - image.get_width()) / 2
-        y = case[1] * TAILLE_CASE - camera_y + (footprint_h_px - image.get_height()) / 2
+        x = grid_x * TAILLE_CASE - camera_x + (footprint_w_px - image.get_width()) / 2
+        y = grid_y * TAILLE_CASE - camera_y + (footprint_h_px - image.get_height()) / 2
 
         surface_monde.blit(image_fantome, (x, y))
 
