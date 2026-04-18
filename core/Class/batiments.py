@@ -29,8 +29,8 @@ class Batiment:
         },
     }
 
-    # Footprint en "petites cases" (style COC) : 3x3 par défaut
-    DEFAULT_FOOTPRINT = 3
+    # Footprint en "petites cases" (style COC) : 5x5 par défaut
+    DEFAULT_FOOTPRINT = 5
 
     def __init__(self, type_batiment, x, y):
         if type_batiment not in Batiment.DATA:
