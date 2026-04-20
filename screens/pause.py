@@ -77,9 +77,9 @@ def menu_pause(ecran, horloge, FPS, buildings, online_data, player: Player, scre
                     return "menu"
                 if boutons[1].clic():
                     if not save_game(buildings, player, online_data):
-                        print("ERREUR CRITIQUE: Écriture du fichier save/save.json")
+                        print("ERREUR CRITIQUE: Ecriture du fichier save/save.json")
                         return False
-                    print("Sauvegarde réussite, retour au jeu")
+                    print("Sauvegarde reussie, retour au jeu")
                     return "jeu_save_done"
                 if musique_btn.clic():
                     if music_on:

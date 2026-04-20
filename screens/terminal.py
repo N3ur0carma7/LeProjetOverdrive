@@ -1,6 +1,6 @@
 """
 Ajouter une nouvelle commande :
-    1. Definir une fonction  cmd_xxx(args, player, batiments, **ctx)  → str (message de retour)
+    1. Definir une fonction  cmd_xxx(args, player, batiments, **ctx)  -> str (message de retour)
     2. L'enregistrer dans COMMANDS avec sa description.
 """
 
@@ -24,7 +24,7 @@ def _is_hello_world(raw: str) -> bool:
 
 
 class MatrixRain:
-    CHARS    = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789アイウエオカキクケコ#$%&"
+    CHARS    = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#$%&"
     DURATION = 4.0
     FADE_IN  = 0.3
     FADE_OUT = 1.0
@@ -108,7 +108,7 @@ def cmd_godlike(args, player, batiments, **ctx):
     player.money  += 10_000
     player.food   += 10_000
     player.vapeur += 10_000
-    return "✓ +10 000 or, nourriture, vapeur"
+    return "[OK] +10 000 or, nourriture, vapeur"
 
 def cmd_give(args, player, batiments, **ctx):
     ressources = {"or": "money", "food": "food", "vapeur": "vapeur",
@@ -143,11 +143,11 @@ def cmd_set(args, player, batiments, **ctx):
 def cmd_status(args, player, batiments, **ctx):
     return (f"HP {player.hp}/{player.hp_max}  |  "
             f"Or {player.money}  |  Food {player.food}  |  Vapeur {player.vapeur}  |  "
-            f"Bâtiments {len(batiments)}")
+            f"Batiments {len(batiments)}")
 
 def cmd_heal(args, player, batiments, **ctx):
     player.hp = player.hp_max
-    return f"✓ HP restaures a {player.hp_max}"
+    return f"[OK] HP restaures a {player.hp_max}"
 
 def cmd_clear(args, player, batiments, **ctx):
     return "__CLEAR__"
@@ -446,7 +446,7 @@ class Terminal:
         pygame.draw.rect(ecran, (30, 30, 30), (0, input_y, W, input_h))
         pygame.draw.line(ecran, (0, 180, 80), (0, input_y), (W, input_y), 1)
 
-        cursor      = "█" if (pygame.time.get_ticks() // 500) % 2 == 0 else " "
+        cursor      = "_" if (pygame.time.get_ticks() // 500) % 2 == 0 else " "
         texte_input = font.render("> " + self.input_text + cursor, True, (0, 255, 140))
         ecran.blit(texte_input, (padding, input_y + padding))
 

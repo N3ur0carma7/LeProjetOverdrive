@@ -42,7 +42,7 @@ def confirmation_ecraser(ecran, horloge, FPS):
         ecran.blit(panel, (60, 90))
 
         font = pygame.font.SysFont("Arial", 32, bold=True)
-        texte = "Êtes-vous sûr de vouloir écraser votre sauvegarde actuelle ?"
+        texte = "Etes-vous sur de vouloir ecraser votre sauvegarde actuelle ?"
         text_surface = font.render(texte, True, (255, 255, 255))
         text_rect = text_surface.get_rect(center=(LARGEUR_ECRAN // 2, 180))
         ecran.blit(text_surface, text_rect)

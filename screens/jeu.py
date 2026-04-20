@@ -233,13 +233,13 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
     raid_manager = RaidManager(taille_case=TAILLE_CASE)
 
     def _log_raid_start(n):
-        terminal._log(f"☠  RAID #{n} en approche ! Défendez-vous !")
+        terminal._log(f"[RAID] RAID #{n} en approche ! Defendez-vous !")
 
     def _log_wave(wave, nb):
-        terminal._log(f"  ⚔  Vague {wave}/{RaidManager.WAVES_PER_RAID} — {nb} monstre(s) spawné(s)")
+        terminal._log(f"  [VAGUE] Vague {wave}/{RaidManager.WAVES_PER_RAID} - {nb} monstre(s) spawne(s)")
 
     def _log_raid_end():
-        terminal._log("✓ Raid terminé. Vous avez survécu !")
+        terminal._log("[OK] Raid termine. Vous avez survecu !")
 
     raid_manager.on_raid_start = _log_raid_start
     raid_manager.on_wave_spawn = _log_wave
@@ -383,7 +383,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
                 if batiment_selectionne is not None:
                     batiment_selectionne = None
-                    print("Sélection annulée")
+                    print("Selection annulee")
 
                 else:
                     sx, sy = pygame.mouse.get_pos()
@@ -392,7 +392,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
                     if sy < limite_ui:
                         if not players[indice].a_star(case, TAILLE_CASE):
                             sx2, sy2 = pygame.mouse.get_pos()
-                            float_msg.info("Chemin bloqué", sx2, sy2 - 30, player_id=indice)
+                            float_msg.info("Chemin bloque", sx2, sy2 - 30, player_id=indice)
 
 
 
@@ -506,9 +506,9 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
                                 print(f"envoi en cours {batiments}")
                                 send_liste_batiments_client(batiments, client_module.CLIENT)
                         elif collision(batiments, nouveau):
-                            float_msg.error("Emplacement occupé !", sx, sy - 30, player_id=indice)
+                            float_msg.error("Emplacement occupe !", sx, sy - 30, player_id=indice)
                         else:
-                            float_msg.warning(f"Pas assez d'or ! (coût : {cout})", sx, sy - 30, player_id=indice)
+                            float_msg.warning(f"Pas assez d'or ! (cout : {cout})", sx, sy - 30, player_id=indice)
 
                     else:
                         for B in batiments:
@@ -568,7 +568,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
                 raid_manager._auto_timer = 30.0
                 # Message informatif
                 W2, H2 = dims[0] // 2, dims[1] // 2
-                float_msg.warning("–30% de ressources perdues !", W2, H2 - 40)
+                float_msg.warning("-30% de ressources perdues !", W2, H2 - 40)
                 continue
             else:
                 stop_event.set()

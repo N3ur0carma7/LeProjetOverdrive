@@ -147,7 +147,7 @@ def afficher_game_over(ecran: pygame.Surface, player=None, font_path: str = "ass
                 or_val   = max(0, int(player.money  * 0.70))
                 food_val = max(0, int(player.food   * 0.70))
                 vap_val  = max(0, int(player.vapeur * 0.70))
-                res_txt  = f"Or : {player.money} → {or_val}    Nourriture : {player.food} → {food_val}    Vapeur : {player.vapeur} → {vap_val}"
+                res_txt  = f"Or : {player.money} -> {or_val}    Nourriture : {player.food} -> {food_val}    Vapeur : {player.vapeur} -> {vap_val}"
                 res_surf = res_font.render(res_txt, True, (180, 180, 180))
                 ecran.blit(res_surf, (W // 2 - res_surf.get_width() // 2, H // 2 + 92))
 
