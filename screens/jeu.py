@@ -10,7 +10,7 @@ from core.Class.batiments import *
 import time
 import random
 from screens.environment import CloudManager
-from screens.game_logic import stop_event, on_message_recu, new_player, draw_players
+from screens.game_logic import stop_event, on_message_recu, new_player, draw_players, players
 from screens.render import corriger_transparence
 
 from core.Class.player import Player
