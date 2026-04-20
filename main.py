@@ -18,7 +18,6 @@ if __name__ == "__main__":
     en_cours = True
     etat = "menu"
     while en_cours:
-        # Gestion globale du plein écran (F11) entre les écrans
         for event in pygame.event.get([pygame.KEYDOWN]):
             if event.key == pygame.K_F11:
                 fullscreen = not fullscreen

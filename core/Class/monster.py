@@ -125,6 +125,7 @@ class Monster:
     ATTACK_DAMAGE   = 3
     ATTACK_RANGE    = 40
     ATTACK_COOLDOWN = 1.0
+    ATTACK_DAMAGE_DELAY = 0.15
     SIZE            = 36
 
     ANIM_FPS_IDLE   = 6
@@ -156,6 +157,7 @@ class Monster:
         self._is_attacking = False
         self._attack_anim_timer    = 0.0
         self._attack_anim_duration = 0.4
+        self._attack_damage_applied = False
 
         self._hit_flash_timer    = 0.0
         self._hit_flash_duration = 0.15
@@ -169,12 +171,6 @@ class Monster:
 
         self._attack_timer    = max(0.0, self._attack_timer - dt)
         self._hit_flash_timer = max(0.0, self._hit_flash_timer - dt)
-
-        if self._is_attacking:
-            self._attack_anim_timer -= dt
-            if self._attack_anim_timer <= 0:
-                self._is_attacking = False
-                self._anim_frame   = 0
 
         target     = None
         best_dist  = float("inf")
@@ -199,12 +195,26 @@ class Monster:
         if dx != 0:
             self._facing_left = dx < 0
 
+        if self._is_attacking:
+            self._attack_anim_timer -= dt
+
+            if not self._attack_damage_applied:
+                time_since_start = self._attack_anim_duration - self._attack_anim_timer
+                if time_since_start >= self.ATTACK_DAMAGE_DELAY:
+                    target.hurt(self.ATTACK_DAMAGE)
+                    self._attack_damage_applied = True
+
+            if self._attack_anim_timer <= 0:
+                self._is_attacking = False
+                self._attack_damage_applied = False
+                self._anim_frame   = 0
+
         if dist <= self.ATTACK_RANGE:
             if self._attack_timer <= 0.0:
-                target.hurt(self.ATTACK_DAMAGE)
                 self._attack_timer = self.ATTACK_COOLDOWN
                 self._is_attacking = True
                 self._attack_anim_timer = self._attack_anim_duration
+                self._attack_damage_applied = False
                 self._anim_frame = 0
             self._update_anim(dt, moving=False)
         else:

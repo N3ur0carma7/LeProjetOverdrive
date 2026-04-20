@@ -10,54 +10,8 @@ from core.Class.batiments import *
 import time
 import random
 from screens.environment import CloudManager
-
-stop_event = threading.Event()
-batiments = []
-players = []
-indice = 0
-connected = 0
-dt = 0.0
-def on_message_recu(TAILLE_CASE):
-    global batiments, players, indice, connected
-    messageprec = None
-    if client_module.CLIENT is not None:
-        send_str_client("pos", client_module.CLIENT)
-    while not stop_event.is_set():
-        try:
-            if client_module.result is not None:
-                message, type = client_module.result
-                if message != messageprec:
-                    if type == "float":
-                        connected = message
-                    elif type == "int":
-                        indice = message
-                    elif type == "liste_batiments":
-                        batiments = message
-                    elif type == "liste_joueurs":
-                        players = message
-                        for player in players:
-                            player.update_anim(dt, players)
-                    messageprec = message
-
-            time.sleep(0.05)
-        except Exception:
-            time.sleep(0.1)
-
-def new_player(TAILLE_CASE):
-    global players
-    player = Player()
-    # Spawn du joueur au milieu d'une case
-    player.pos = (TAILLE_CASE / 2, TAILLE_CASE / 2)
-    players.append(player)
-
-def draw_players(surface, camera_x, camera_y):
-    global players
-    nuber = 0
-    if surface is None or camera_x is None or camera_y is None:
-        return
-    for player in players:
-        player.draw_player(surface, camera_x, camera_y)
-        nuber = nuber + 1
+from screens.game_logic import stop_event, on_message_recu, new_player, draw_players
+from screens.render import corriger_transparence
 
 from core.Class.player import Player
 from core.Class.batiments import Batiment
@@ -75,14 +29,6 @@ from screens.GUI.menu_amelioration import afficher_menu_amelioration
 import core.sounds as sound
 from screens.floating_messages import FloatingMessageManager
 
-def corriger_transparence(surface):
-    width, height = surface.get_size()
-    for x in range(width):
-        for y in range(height):
-            color = surface.get_at((x, y))
-            if color.a < 20:
-                surface.set_at((x, y), (0, 0, 0, 0))
-    return surface
 surface_monde, camera_x, camera_y = None, None, None
 TAILLE_CASE = None
 def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False):
@@ -233,13 +179,13 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
     raid_manager = RaidManager(taille_case=TAILLE_CASE)
 
     def _log_raid_start(n):
-        terminal._log(f"☠  RAID #{n} en approche ! Défendez-vous !")
+        terminal._log(f"[RAID] RAID #{n} en approche ! Defendez-vous !")
 
     def _log_wave(wave, nb):
-        terminal._log(f"  ⚔  Vague {wave}/{RaidManager.WAVES_PER_RAID} — {nb} monstre(s) spawné(s)")
+        terminal._log(f"  [VAGUE] Vague {wave}/{RaidManager.WAVES_PER_RAID} - {nb} monstre(s) spawne(s)")
 
     def _log_raid_end():
-        terminal._log("✓ Raid terminé. Vous avez survécu !")
+        terminal._log("[OK] Raid termine. Vous avez survecu !")
 
     raid_manager.on_raid_start = _log_raid_start
     raid_manager.on_wave_spawn = _log_wave
@@ -250,9 +196,6 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
     ZOOM_MIN = 0.3
     ZOOM_MAX = 2.5
     VITESSE_ZOOM = 0.1
-
-    deplacement_camera = False
-    derniere_souris = (0, 0)
 
     barre_ouverte = False
     SLIDE_SPEED = 400
@@ -317,6 +260,9 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
 
         cloud_manager.update(dt)
 
+        camera_x = player.pos[0] - (dims[0] / zoom) / 2
+        camera_y = player.pos[1] - ((dims[1] - HAUTEUR_BARRE) / zoom) / 2
+
 
         for event in pygame.event.get():
 
@@ -327,6 +273,11 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
             if event.type == pygame.VIDEORESIZE:
                 dims[0], dims[1] = event.w, event.h
                 rects_icones[:] = calculer_rects_icones(dims, HAUTEUR_BARRE, TAILLE_ICONE, int(slide_offset))
+
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
+                from screens import game_logic
+                game_logic.toggle_fullscreen()
+                continue
 
             # terminal toggle
             if event.type == pygame.KEYDOWN and event.unicode == "²":
@@ -364,26 +315,11 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
                 camera_x = souris_monde_x - sx / zoom
                 camera_y = souris_monde_y - sy / zoom
 
-            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 2:
-                deplacement_camera = True
-                derniere_souris = pygame.mouse.get_pos()
-
-            if event.type == pygame.MOUSEBUTTONUP and event.button == 2:
-                deplacement_camera = False
-
-            if event.type == pygame.MOUSEMOTION and deplacement_camera:
-                sx, sy = pygame.mouse.get_pos()
-                dx = sx - derniere_souris[0]
-                dy = sy - derniere_souris[1]
-                camera_x -= dx / zoom
-                camera_y -= dy / zoom
-                derniere_souris = (sx, sy)
-
-#clic droit
+            #clic droit
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
                 if batiment_selectionne is not None:
                     batiment_selectionne = None
-                    print("Sélection annulée")
+                    print("Selection annulee")
 
                 else:
                     sx, sy = pygame.mouse.get_pos()
@@ -392,7 +328,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
                     if sy < limite_ui:
                         if not players[indice].a_star(case, TAILLE_CASE):
                             sx2, sy2 = pygame.mouse.get_pos()
-                            float_msg.info("Chemin bloqué", sx2, sy2 - 30)
+                            float_msg.info("Chemin bloque", sx2, sy2 - 30, player_id=indice)
 
 
 
@@ -494,9 +430,9 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
 
                         # Portée de pose augmentée
                         if not joueur_a_portee((grid_x, grid_y), players[indice], TAILLE_CASE, distance_max=10, largeur=nouveau.largeur, hauteur=nouveau.hauteur):
-                            float_msg.error("Trop loin ! Rapprochez-vous", sx, sy - 30)
+                            float_msg.error("Trop loin ! Rapprochez-vous", sx, sy - 30, player_id=indice)
                         elif production_pleine:
-                            float_msg.warning("Pas assez de villageois !", sx, sy - 30)
+                            float_msg.warning("Pas assez de villageois !", sx, sy - 30, player_id=indice)
                         elif not collision(batiments, nouveau) and players[indice].money >= cout:
                             players[indice].money -= cout
                             batiments.append(nouveau)
@@ -506,9 +442,9 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
                                 print(f"envoi en cours {batiments}")
                                 send_liste_batiments_client(batiments, client_module.CLIENT)
                         elif collision(batiments, nouveau):
-                            float_msg.error("Emplacement occupé !", sx, sy - 30)
+                            float_msg.error("Emplacement occupe !", sx, sy - 30, player_id=indice)
                         else:
-                            float_msg.warning(f"Pas assez d'or ! (coût : {cout})", sx, sy - 30)
+                            float_msg.warning(f"Pas assez d'or ! (cout : {cout})", sx, sy - 30, player_id=indice)
 
                     else:
                         for B in batiments:
@@ -522,7 +458,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
 
                             if rect.collidepoint(mx, my):
                                 if not joueur_a_portee((B.x, B.y), players[indice], TAILLE_CASE, distance_max=10, largeur=B.largeur, hauteur=B.hauteur):
-                                    float_msg.error("Trop loin ! Rapprochez-vous", sx, sy - 30)
+                                    float_msg.error("Trop loin ! Rapprochez-vous", sx, sy - 30, player_id=indice)
                                     break
                                 resultat = afficher_menu_amelioration(ecran, B, sx, players[indice])
 
@@ -568,7 +504,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
                 raid_manager._auto_timer = 30.0
                 # Message informatif
                 W2, H2 = dims[0] // 2, dims[1] // 2
-                float_msg.warning("–30% de ressources perdues !", W2, H2 - 40)
+                float_msg.warning("-30% de ressources perdues !", W2, H2 - 40)
                 continue
             else:
                 stop_event.set()

@@ -1,13 +1,3 @@
-"""
-Gestionnaire de raids PVE.
-
-Un raid = 4 vagues de monstres.
-Chaque vague : 3 ou 4 monstres spawnent à ~40 cases de chaque joueur.
-Entre les vagues : WAVE_DELAY secondes.
-
-Sans déclenchement manuel, un raid se lance toutes les AUTO_RAID_MIN à AUTO_RAID_MAX minutes.
-La commande terminal `trigger_raid` déclenche un raid immédiatement.
-"""
 
 import math
 import random
@@ -18,7 +8,7 @@ TAILLE_CASE_DEFAULT = 64   # fallback si non transmis
 
 
 class DamageNumber:
-    """Chiffre de dégâts flottant affiché à l'écran."""
+    #Chiffre de dégâts flottant affiché à l'écran.
     DURATION = 1.0   # secondes
 
     def __init__(self, x: float, y: float, amount: int, is_crit: bool = False):
@@ -73,7 +63,7 @@ class RaidManager:
         self.damage_numbers: list = []
 
         self._raid_active   = False
-        self._wave_index    = 0          # vague en cours (0-based)
+        self._wave_index    = 0          # vague en cours
         self._wave_timer    = 0.0        # temps restant avant prochaine vague
         self._auto_timer    = self._random_auto_delay()
         self._raid_count    = 0          # nombre de raids déclenchés
@@ -83,18 +73,14 @@ class RaidManager:
         self.on_wave_spawn: callable = None   # fn(wave_num, nb)
         self.on_raid_end:   callable = None   # fn()
 
-    # ------------------------------------------------------------------
-    # Interface publique
-    # ------------------------------------------------------------------
+
     def trigger_raid(self) -> str:
-        """Déclenche un raid immédiatement. Retourne un message."""
         if self._raid_active:
             return "Un raid est deja en cours !"
         self._start_raid()
         return f"RAID #{self._raid_count} DECLENCHE ! Preparez-vous..."
 
     def update(self, players: list, dt: float):
-        """À appeler chaque frame avec la liste des joueurs et le delta-time."""
         # Timer automatique
         if not self._raid_active:
             self._auto_timer -= dt
@@ -124,18 +110,13 @@ class RaidManager:
                     if not self.monsters:
                         self._end_raid()
 
-    # ------------------------------------------------------------------
-    # Dessin
-    # ------------------------------------------------------------------
+    #draw
     def draw(self, surface, camera_x: float, camera_y: float):
         for m in self.monsters:
             m.draw(surface, camera_x, camera_y)
         for dn in self.damage_numbers:
             dn.draw(surface, camera_x, camera_y)
 
-    # ------------------------------------------------------------------
-    # Interne
-    # ------------------------------------------------------------------
     def _start_raid(self):
         self._raid_active = True
         self._wave_index  = 0
@@ -152,7 +133,7 @@ class RaidManager:
         for player in players:
             for _ in range(nb):
                 angle = random.uniform(0, 2 * math.pi)
-                # Distance : exactement ~40 cases + léger aléatoire
+                # Distance
                 dist_px = (self.SPAWN_DISTANCE_CASES + random.uniform(-0.5, 0.5)) * self.taille_case
                 mx = player.pos[0] + math.cos(angle) * dist_px
                 my = player.pos[1] + math.sin(angle) * dist_px
@@ -162,7 +143,7 @@ class RaidManager:
         if self.on_wave_spawn:
             self.on_wave_spawn(self._wave_index, spawned)
 
-        # Délai avant la prochaine vague (ou fin)
+        # Délai avant la prochaine vague
         self._wave_timer = self.WAVE_DELAY
 
     def _end_raid(self):

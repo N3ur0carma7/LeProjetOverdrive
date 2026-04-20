@@ -2,6 +2,15 @@ import pygame
 import math
 from screens.utils import collision, souris_vers_case, joueur_a_portee
 
+def corriger_transparence(surface):
+    width, height = surface.get_size()
+    for x in range(width):
+        for y in range(height):
+            color = surface.get_at((x, y))
+            if color.a < 20:
+                surface.set_at((x, y), (0, 0, 0, 0))
+    return surface
+
 def _scale_contain(img: pygame.Surface, max_w: int, max_h: int) -> pygame.Surface:
     iw, ih = img.get_size()
     if iw <= 0 or ih <= 0 or max_w <= 0 or max_h <= 0:

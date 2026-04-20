@@ -105,6 +105,10 @@ def menu_principal(ecran, horloge, FPS):
                 LARGEUR_ECRAN, HAUTEUR_ECRAN = event.w, event.h
                 boutons = creer_boutons()
                 overlay = None
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
+                from screens import game_logic
+                game_logic.toggle_fullscreen()
+                continue
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if boutons[0].clic():
                     if os.path.exists("save/save.json"):

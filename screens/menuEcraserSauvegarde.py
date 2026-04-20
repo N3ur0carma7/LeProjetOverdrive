@@ -24,6 +24,10 @@ def confirmation_ecraser(ecran, horloge, FPS):
                 return False
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 return "menu"
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
+                from screens import game_logic
+                game_logic.toggle_fullscreen()
+                continue
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if boutons[0].clic():
                     if os.path.exists("save/save.json"):
@@ -42,7 +46,7 @@ def confirmation_ecraser(ecran, horloge, FPS):
         ecran.blit(panel, (60, 90))
 
         font = pygame.font.SysFont("Arial", 32, bold=True)
-        texte = "Êtes-vous sûr de vouloir écraser votre sauvegarde actuelle ?"
+        texte = "Etes-vous sur de vouloir ecraser votre sauvegarde actuelle ?"
         text_surface = font.render(texte, True, (255, 255, 255))
         text_rect = text_surface.get_rect(center=(LARGEUR_ECRAN // 2, 180))
         ecran.blit(text_surface, text_rect)

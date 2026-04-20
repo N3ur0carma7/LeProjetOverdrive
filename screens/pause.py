@@ -65,6 +65,10 @@ def menu_pause(ecran, horloge, FPS, buildings, online_data, player: Player, scre
             if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 # ESC ferme le menu pause
                 return "jeu"
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
+                from screens import game_logic
+                game_logic.toggle_fullscreen()
+                continue
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if boutons[0].clic():
                     if online_data and CLIENT is not None:
@@ -77,9 +81,9 @@ def menu_pause(ecran, horloge, FPS, buildings, online_data, player: Player, scre
                     return "menu"
                 if boutons[1].clic():
                     if not save_game(buildings, player, online_data):
-                        print("ERREUR CRITIQUE: Écriture du fichier save/save.json")
+                        print("ERREUR CRITIQUE: Ecriture du fichier save/save.json")
                         return False
-                    print("Sauvegarde réussite, retour au jeu")
+                    print("Sauvegarde reussie, retour au jeu")
                     return "jeu_save_done"
                 if musique_btn.clic():
                     if music_on:
