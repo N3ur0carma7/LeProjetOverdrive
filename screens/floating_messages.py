@@ -40,6 +40,7 @@ class _FloatingMsg:
         self.small    = small
         self.timer    = 0.0
         self.alive    = True
+        self.player_id = None
 
     def update(self, dt: float):
         self.timer += dt
@@ -80,35 +81,39 @@ class _FloatingMsg:
 class FloatingMessageManager:
     """Gère une liste de messages flottants."""
 
-    # Couleurs prédéfinies pour les cas récurrents
-    COLOR_ERROR   = (230,  60,  60)   # rouge  — action impossible
-    COLOR_WARNING = (255, 165,   0)   # orange — ressources insuffisantes
-    COLOR_INFO    = (100, 200, 255)   # bleu   — info neutre
-    COLOR_SUCCESS = ( 80, 220,  80)   # vert   — succès
+    COLOR_ERROR   = (230,  60,  60)
+    COLOR_WARNING = (255, 165,   0)
+    COLOR_INFO    = (100, 200, 255)
+    COLOR_SUCCESS = ( 80, 220,  80)
 
     def __init__(self):
         self._messages: list[_FloatingMsg] = []
 
     def add(self, text: str, x: int, y: int,
-            color=None, small: bool = False):
-        """Ajoute un message flottant à la position écran (x, y)."""
+            color=None, small: bool = False, player_id: int = None):
+        """Ajoute un message flottant. Si player_id est donné, remplace un message existant pour ce joueur."""
         if color is None:
             color = self.COLOR_ERROR
-        # Décaler légèrement si plusieurs messages sur le même spot
+
+        if player_id is not None:
+            self._messages = [m for m in self._messages if m.player_id != player_id]
+
         offset = len(self._messages) * 6
-        self._messages.append(_FloatingMsg(text, x, y - offset, color, small))
+        msg = _FloatingMsg(text, x, y - offset, color, small)
+        msg.player_id = player_id
+        self._messages.append(msg)
 
-    def error(self, text: str, x: int, y: int):
-        self.add(text, x, y, self.COLOR_ERROR)
+    def error(self, text: str, x: int, y: int, player_id: int = None):
+        self.add(text, x, y, self.COLOR_ERROR, player_id=player_id)
 
-    def warning(self, text: str, x: int, y: int):
-        self.add(text, x, y, self.COLOR_WARNING)
+    def warning(self, text: str, x: int, y: int, player_id: int = None):
+        self.add(text, x, y, self.COLOR_WARNING, player_id=player_id)
 
-    def info(self, text: str, x: int, y: int):
-        self.add(text, x, y, self.COLOR_INFO)
+    def info(self, text: str, x: int, y: int, player_id: int = None):
+        self.add(text, x, y, self.COLOR_INFO, player_id=player_id)
 
-    def success(self, text: str, x: int, y: int):
-        self.add(text, x, y, self.COLOR_SUCCESS)
+    def success(self, text: str, x: int, y: int, player_id: int = None):
+        self.add(text, x, y, self.COLOR_SUCCESS, player_id=player_id)
 
     def update(self, dt: float):
         for m in self._messages:

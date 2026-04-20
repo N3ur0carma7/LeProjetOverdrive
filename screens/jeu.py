@@ -392,7 +392,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
                     if sy < limite_ui:
                         if not players[indice].a_star(case, TAILLE_CASE):
                             sx2, sy2 = pygame.mouse.get_pos()
-                            float_msg.info("Chemin bloqué", sx2, sy2 - 30)
+                            float_msg.info("Chemin bloqué", sx2, sy2 - 30, player_id=indice)
 
 
 
@@ -494,9 +494,9 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
 
                         # Portée de pose augmentée
                         if not joueur_a_portee((grid_x, grid_y), players[indice], TAILLE_CASE, distance_max=10, largeur=nouveau.largeur, hauteur=nouveau.hauteur):
-                            float_msg.error("Trop loin ! Rapprochez-vous", sx, sy - 30)
+                            float_msg.error("Trop loin ! Rapprochez-vous", sx, sy - 30, player_id=indice)
                         elif production_pleine:
-                            float_msg.warning("Pas assez de villageois !", sx, sy - 30)
+                            float_msg.warning("Pas assez de villageois !", sx, sy - 30, player_id=indice)
                         elif not collision(batiments, nouveau) and players[indice].money >= cout:
                             players[indice].money -= cout
                             batiments.append(nouveau)
@@ -506,9 +506,9 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
                                 print(f"envoi en cours {batiments}")
                                 send_liste_batiments_client(batiments, client_module.CLIENT)
                         elif collision(batiments, nouveau):
-                            float_msg.error("Emplacement occupé !", sx, sy - 30)
+                            float_msg.error("Emplacement occupé !", sx, sy - 30, player_id=indice)
                         else:
-                            float_msg.warning(f"Pas assez d'or ! (coût : {cout})", sx, sy - 30)
+                            float_msg.warning(f"Pas assez d'or ! (coût : {cout})", sx, sy - 30, player_id=indice)
 
                     else:
                         for B in batiments:
@@ -522,7 +522,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
 
                             if rect.collidepoint(mx, my):
                                 if not joueur_a_portee((B.x, B.y), players[indice], TAILLE_CASE, distance_max=10, largeur=B.largeur, hauteur=B.hauteur):
-                                    float_msg.error("Trop loin ! Rapprochez-vous", sx, sy - 30)
+                                    float_msg.error("Trop loin ! Rapprochez-vous", sx, sy - 30, player_id=indice)
                                     break
                                 resultat = afficher_menu_amelioration(ecran, B, sx, players[indice])
 
