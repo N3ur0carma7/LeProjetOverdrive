@@ -66,7 +66,7 @@ def dessiner_monde(surface_monde, batiments, images_batiments, camera_x, camera_
         image_fantome = image.copy()
         if collision(batiments, test_batiment):
             image_fantome.fill((255, 0, 0, 120), special_flags=pygame.BLEND_RGBA_MULT)
-        elif not joueur_a_portee((grid_x, grid_y), player, TAILLE_CASE, distance_max=10, largeur=test_batiment.largeur, hauteur=test_batiment.hauteur):
+        elif not joueur_a_portee((grid_x, grid_y), player, TAILLE_CASE, distance_max=10, width=test_batiment.largeur, height=test_batiment.hauteur):
             image_fantome.fill((255, 140, 0, 120), special_flags=pygame.BLEND_RGBA_MULT)
 
         x = grid_x * TAILLE_CASE - camera_x + (footprint_w_px - image.get_width()) / 2

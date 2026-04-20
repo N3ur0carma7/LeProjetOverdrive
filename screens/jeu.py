@@ -429,7 +429,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
                         production_pleine = (type_batiment != Batiment.TYPE_RESIDENTIEL and nb_production >= nb_villageois)
 
                         # Portée de pose augmentée
-                        if not joueur_a_portee((grid_x, grid_y), players[indice], TAILLE_CASE, distance_max=10, largeur=nouveau.largeur, hauteur=nouveau.hauteur):
+                        if not joueur_a_portee((grid_x, grid_y), players[indice], TAILLE_CASE, distance_max=10, width=nouveau.largeur, height=nouveau.hauteur):
                             float_msg.error("Trop loin ! Rapprochez-vous", sx, sy - 30, player_id=indice)
                         elif production_pleine:
                             float_msg.warning("Pas assez de villageois !", sx, sy - 30, player_id=indice)
@@ -457,7 +457,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
                             rect = B.get_rect_pixel(TAILLE_CASE)
 
                             if rect.collidepoint(mx, my):
-                                if not joueur_a_portee((B.x, B.y), players[indice], TAILLE_CASE, distance_max=10, largeur=B.largeur, hauteur=B.hauteur):
+                                if not joueur_a_portee((B.x, B.y), players[indice], TAILLE_CASE, distance_max=10, width=B.largeur, height=B.hauteur):
                                     float_msg.error("Trop loin ! Rapprochez-vous", sx, sy - 30, player_id=indice)
                                     break
                                 resultat = afficher_menu_amelioration(ecran, B, sx, players[indice])
