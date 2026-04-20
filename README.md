@@ -62,7 +62,7 @@ Le jeu supporte un mode **multijoueur en réseau local**, un **arbre de compéte
 ### Installation
 
 ```bash
-git clone https://github.com/<votre-org>/LeProjetOverdrive.git
+git clone https://github.com/Neurocarma/LeProjetOverdrive.git
 cd LeProjetOverdrive
 
 # Créer un environnement virtuel (recommandé)
@@ -101,7 +101,6 @@ Le multijoueur fonctionne en **réseau local uniquement**.
 | Placer un bâtiment | Clic gauche (après sélection) |
 | Attaquer un monstre | Clic gauche sur le monstre (à portée) |
 | Annuler la sélection | Clic droit |
-| Déplacer la caméra | Clic molette + glisser |
 | Zoom | Molette souris |
 | Plein écran | F11 |
 | Menu pause / sauvegarde | Échap |
