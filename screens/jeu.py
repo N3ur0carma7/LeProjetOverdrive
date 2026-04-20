@@ -73,6 +73,7 @@ from core.pve import RaidManager
 
 from screens.GUI.menu_amelioration import afficher_menu_amelioration
 import core.sounds as sound
+from screens.floating_messages import FloatingMessageManager
 
 def corriger_transparence(surface):
     width, height = surface.get_size()
@@ -92,11 +93,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
     LARGEUR_ECRAN, HAUTEUR_ECRAN = ecran.get_size()
     dims = [LARGEUR_ECRAN, HAUTEUR_ECRAN]  # mutable pour mise a jour au resize
 
-    # Grille fine (style Clash of Clans) : petites cases indépendantes des sprites
-    # 3x3 cases = 1 bâtiment
     herbe = None
-    # Taille d'une case "grille fine" (placement + déplacements).
-    # Tu peux la modifier ici.
     TAILLE_CASE = 40
 
     def _pos_centre_case(cx: int, cy: int):
@@ -232,7 +229,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
 
     terminal = Terminal()
 
-    # --- PVE : gestionnaire de raids ---
+    # PVE
     raid_manager = RaidManager(taille_case=TAILLE_CASE)
 
     def _log_raid_start(n):
@@ -247,6 +244,8 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
     raid_manager.on_raid_start = _log_raid_start
     raid_manager.on_wave_spawn = _log_wave
     raid_manager.on_raid_end   = _log_raid_end
+
+    float_msg = FloatingMessageManager()
 
     ZOOM_MIN = 0.3
     ZOOM_MAX = 2.5
@@ -392,7 +391,8 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
                     limite_ui = HAUTEUR_ECRAN - (HAUTEUR_BARRE - slide_offset)
                     if sy < limite_ui:
                         if not players[indice].a_star(case, TAILLE_CASE):
-                            print("Chemin bloqué")
+                            sx2, sy2 = pygame.mouse.get_pos()
+                            float_msg.info("Chemin bloqué", sx2, sy2 - 30)
 
 
 
@@ -421,24 +421,21 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
                             break
 
 
-                # --- Attaque des monstres au clic gauche ---
+                # attaque
                 monster_clicked = False
                 if not clic_barre and raid_manager is not None and attack_cooldown <= 0.0:
-                    # Coordonnées dans l'espace monde (en tenant compte du zoom et de la caméra)
                     world_sx = camera_x + sx / zoom
                     world_sy = camera_y + sy / zoom
-                    # Utilise le rect écran (non zoomé) pour la détection de clic
                     for m in raid_manager.monsters:
                         if not m.alive:
                             continue
-                        # Calcul de la distance joueur-monstre (portée d'attaque)
+                        # Calcul de la distance joueur-monstre
                         dist_joueur = ((player.pos[0] - m.x) ** 2 + (player.pos[1] - m.y) ** 2) ** 0.5
                         PORTEE_ATTAQUE_JOUEUR = 80  # px — réduit pour le hand_cannon (corps à corps)
                         if dist_joueur > PORTEE_ATTAQUE_JOUEUR:
                             continue
-                        # Rect en coordonnées écran (sans zoom appliqué sur la caméra)
+                        # Rect en coordonnées écran
                         m_screen_rect = m.get_screen_rect(camera_x, camera_y)
-                        # Adapter à l'écran zoomé
                         zoomed_rect = pygame.Rect(
                             int(m_screen_rect.x * zoom),
                             int(m_screen_rect.y * zoom),
@@ -448,7 +445,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
                         # Agrandir la hitbox pour faciliter le clic
                         zoomed_rect.inflate_ip(12, 12)
                         if zoomed_rect.collidepoint(sx, sy):
-                            # Déclencher l'animation d'attaque hand_cannon
+                            # Déclencher l'animation d'attaque
                             player.trigger_attack_anim()
                             # Orienter le joueur vers le monstre
                             if m.x < player.pos[0]:
@@ -497,9 +494,9 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
 
                         # Portée de pose augmentée
                         if not joueur_a_portee((grid_x, grid_y), players[indice], TAILLE_CASE, distance_max=10, largeur=nouveau.largeur, hauteur=nouveau.hauteur):
-                            print("Trop loin : rapprochez-vous de la zone (10 cases max)")
+                            float_msg.error("Trop loin ! Rapprochez-vous", sx, sy - 30)
                         elif production_pleine:
-                            print("Pas assez de villageois pour ce batiment de production")
+                            float_msg.warning("Pas assez de villageois !", sx, sy - 30)
                         elif not collision(batiments, nouveau) and players[indice].money >= cout:
                             players[indice].money -= cout
                             batiments.append(nouveau)
@@ -508,6 +505,10 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
                             if client_module.CLIENT is not None and online:
                                 print(f"envoi en cours {batiments}")
                                 send_liste_batiments_client(batiments, client_module.CLIENT)
+                        elif collision(batiments, nouveau):
+                            float_msg.error("Emplacement occupé !", sx, sy - 30)
+                        else:
+                            float_msg.warning(f"Pas assez d'or ! (coût : {cout})", sx, sy - 30)
 
                     else:
                         for B in batiments:
@@ -521,7 +522,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
 
                             if rect.collidepoint(mx, my):
                                 if not joueur_a_portee((B.x, B.y), players[indice], TAILLE_CASE, distance_max=10, largeur=B.largeur, hauteur=B.hauteur):
-                                    print("Trop loin : rapprochez-vous du bâtiment (10 cases max)")
+                                    float_msg.error("Trop loin ! Rapprochez-vous", sx, sy - 30)
                                     break
                                 resultat = afficher_menu_amelioration(ecran, B, sx, players[indice])
 
@@ -547,12 +548,16 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
         player.update(TAILLE_CASE, dt)
         player.update_anim(dt)
 
-        # --- Mort du joueur ---
+        # mort
         if player.hp <= 0:
             from screens.game_over import afficher_game_over
             pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
-            result = afficher_game_over(ecran)
+            result = afficher_game_over(ecran, player)
             if result == "restart":
+                # --- Pénalité : perte de 30% des ressources ---
+                player.money  = max(0, int(player.money  * 0.70))
+                player.food   = max(0, int(player.food   * 0.70))
+                player.vapeur = max(0, int(player.vapeur * 0.70))
                 # Réinitialiser le joueur et le raid
                 player.hp = player.hp_max
                 player.path = []
@@ -561,6 +566,9 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
                 raid_manager.damage_numbers.clear()
                 raid_manager._raid_active = False
                 raid_manager._auto_timer = 30.0
+                # Message informatif
+                W2, H2 = dims[0] // 2, dims[1] // 2
+                float_msg.warning("–30% de ressources perdues !", W2, H2 - 40)
                 continue
             else:
                 stop_event.set()
@@ -599,7 +607,6 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
             hauteur_ui = int(HAUTEUR_BARRE - slide_offset)
             dessiner_grille_overlay_ecran(ecran, camera_x, camera_y, dims, hauteur_ui, zoom, TAILLE_CASE)
 
-        # --- Curseur épée si un monstre est à portée sous la souris ---
         mx_cur, my_cur = pygame.mouse.get_pos()
         hover_monster = False
         if raid_manager is not None:
@@ -623,7 +630,11 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
         else:
             pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_ARROW)
 
+        float_msg.update(dt)
+
         dessiner_hud(ecran, dims, HAUTEUR_BARRE, rects_icones, batiment_selectionne, images_batiments, TYPES_BATIMENTS, TAILLE_ICONE, player, font_argent, hud_or_img, hud_food_img, hud_vapeur_img, save_done_img, save_done_timer, barre_ouverte, int(slide_offset), btn_batiments_rect, skill_btn_rect, raid_manager=raid_manager)
+
+        float_msg.draw(ecran)
 
         terminal.draw(ecran, dt)
 

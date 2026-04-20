@@ -3,12 +3,10 @@ import math
 from screens.utils import collision, souris_vers_case, joueur_a_portee
 
 def _scale_contain(img: pygame.Surface, max_w: int, max_h: int) -> pygame.Surface:
-    """Scale an image to fit inside (max_w, max_h) preserving aspect ratio."""
     iw, ih = img.get_size()
     if iw <= 0 or ih <= 0 or max_w <= 0 or max_h <= 0:
         return img
     scale = min(max_w / iw, max_h / ih)
-    # Ne pas upscaler si déjà pile, mais autoriser l'upscale quand les cases grossissent.
     new_w = max(1, int(round(iw * scale)))
     new_h = max(1, int(round(ih * scale)))
     if new_w == iw and new_h == ih:
@@ -16,7 +14,6 @@ def _scale_contain(img: pygame.Surface, max_w: int, max_h: int) -> pygame.Surfac
     return pygame.transform.smoothscale(img, (new_w, new_h))
 
 def _get_scaled_batiment_image(images_batiments, type_batiment, niveau, footprint_w_px, footprint_h_px, cache):
-    """Return cached scaled building image that fits in the 3x3 footprint."""
     key = (type_batiment, niveau, footprint_w_px, footprint_h_px)
     if key in cache:
         return cache[key]
@@ -180,7 +177,7 @@ def dessiner_hud(ecran, dims, HAUTEUR_BARRE, rects_icones, batiment_selectionne,
     hp_txt = hp_font.render(f"HP {int(player.hp)}/{player.hp_max}", True, (255, 255, 255))
     ecran.blit(hp_txt, (hp_bar_x + 4, hp_bar_y - hp_txt.get_height() - 2))
 
-    # --- Indicateur de raid actif ---
+    # indicateur raid
     if raid_manager is not None and raid_manager._raid_active:
         raid_font = font_argent
         nb_monstres = len(raid_manager.monsters)
@@ -188,7 +185,6 @@ def dessiner_hud(ecran, dims, HAUTEUR_BARRE, rects_icones, batiment_selectionne,
         raid_surf = raid_font.render(wave_txt, True, (255, 80, 80))
         rx = dims[0] // 2 - raid_surf.get_width() // 2
         ry = 6
-        # fond semi-transparent
         bg = pygame.Surface((raid_surf.get_width() + 16, raid_surf.get_height() + 8), pygame.SRCALPHA)
         bg.fill((0, 0, 0, 160))
         ecran.blit(bg, (rx - 8, ry - 4))
