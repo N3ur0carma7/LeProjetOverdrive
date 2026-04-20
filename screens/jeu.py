@@ -317,6 +317,9 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
 
         cloud_manager.update(dt)
 
+        camera_x = player.pos[0] - (dims[0] / zoom) / 2
+        camera_y = player.pos[1] - ((dims[1] - HAUTEUR_BARRE) / zoom) / 2
+
 
         for event in pygame.event.get():
 
