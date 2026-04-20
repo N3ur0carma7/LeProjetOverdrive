@@ -10,54 +10,8 @@ from core.Class.batiments import *
 import time
 import random
 from screens.environment import CloudManager
-
-stop_event = threading.Event()
-batiments = []
-players = []
-indice = 0
-connected = 0
-dt = 0.0
-def on_message_recu(TAILLE_CASE):
-    global batiments, players, indice, connected
-    messageprec = None
-    if client_module.CLIENT is not None:
-        send_str_client("pos", client_module.CLIENT)
-    while not stop_event.is_set():
-        try:
-            if client_module.result is not None:
-                message, type = client_module.result
-                if message != messageprec:
-                    if type == "float":
-                        connected = message
-                    elif type == "int":
-                        indice = message
-                    elif type == "liste_batiments":
-                        batiments = message
-                    elif type == "liste_joueurs":
-                        players = message
-                        for player in players:
-                            player.update_anim(dt, players)
-                    messageprec = message
-
-            time.sleep(0.05)
-        except Exception:
-            time.sleep(0.1)
-
-def new_player(TAILLE_CASE):
-    global players
-    player = Player()
-    # Spawn du joueur au milieu d'une case
-    player.pos = (TAILLE_CASE / 2, TAILLE_CASE / 2)
-    players.append(player)
-
-def draw_players(surface, camera_x, camera_y):
-    global players
-    nuber = 0
-    if surface is None or camera_x is None or camera_y is None:
-        return
-    for player in players:
-        player.draw_player(surface, camera_x, camera_y)
-        nuber = nuber + 1
+from screens.game_logic import stop_event, on_message_recu, new_player, draw_players
+from screens.render import corriger_transparence
 
 from core.Class.player import Player
 from core.Class.batiments import Batiment
@@ -75,14 +29,6 @@ from screens.GUI.menu_amelioration import afficher_menu_amelioration
 import core.sounds as sound
 from screens.floating_messages import FloatingMessageManager
 
-def corriger_transparence(surface):
-    width, height = surface.get_size()
-    for x in range(width):
-        for y in range(height):
-            color = surface.get_at((x, y))
-            if color.a < 20:
-                surface.set_at((x, y), (0, 0, 0, 0))
-    return surface
 surface_monde, camera_x, camera_y = None, None, None
 TAILLE_CASE = None
 def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False):
