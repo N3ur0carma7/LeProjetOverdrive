@@ -251,9 +251,6 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
     ZOOM_MAX = 2.5
     VITESSE_ZOOM = 0.1
 
-    deplacement_camera = False
-    derniere_souris = (0, 0)
-
     barre_ouverte = False
     SLIDE_SPEED = 400
     slide_offset = HAUTEUR_BARRE
@@ -367,22 +364,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
                 camera_x = souris_monde_x - sx / zoom
                 camera_y = souris_monde_y - sy / zoom
 
-            if event.type == pygame.MOUSEBUTTONDOWN and event.button == 2:
-                deplacement_camera = True
-                derniere_souris = pygame.mouse.get_pos()
-
-            if event.type == pygame.MOUSEBUTTONUP and event.button == 2:
-                deplacement_camera = False
-
-            if event.type == pygame.MOUSEMOTION and deplacement_camera:
-                sx, sy = pygame.mouse.get_pos()
-                dx = sx - derniere_souris[0]
-                dy = sy - derniere_souris[1]
-                camera_x -= dx / zoom
-                camera_y -= dy / zoom
-                derniere_souris = (sx, sy)
-
-#clic droit
+            #clic droit
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
                 if batiment_selectionne is not None:
                     batiment_selectionne = None
