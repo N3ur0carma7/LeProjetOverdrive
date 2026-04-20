@@ -353,7 +353,10 @@ def afficher_skill_tree(ecran, player, unlocked_skills, batiments_data):
                 sys.exit()
 
             elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_ESCAPE:
+                if event.key == pygame.K_F11:
+                    from screens import game_logic
+                    game_logic.toggle_fullscreen()
+                elif event.key == pygame.K_ESCAPE:
                     if selected_skill:
                         selected_skill = None
                         buy_btn_rect = None

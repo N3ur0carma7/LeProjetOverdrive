@@ -1,4 +1,15 @@
+import pygame
 from core.Class.npc import Npc
+
+_fullscreen = False
+
+def toggle_fullscreen():
+    global _fullscreen
+    _fullscreen = not _fullscreen
+    if _fullscreen:
+        pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+    else:
+        pygame.display.set_mode((1280, 720), pygame.RESIZABLE)
 
 def synchroniser_npcs(batiments, npcs, player, TAILLE_CASE):
     from core.Class.batiments import Batiment

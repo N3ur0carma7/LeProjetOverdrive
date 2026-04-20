@@ -67,9 +67,12 @@ def afficher_game_over(ecran: pygame.Surface, player=None, font_path: str = "ass
                 return "quit"
 
             if event.type == pygame.KEYDOWN:
-                if event.key in (pygame.K_RETURN, pygame.K_r):
+                if event.key == pygame.K_F11:
+                    from screens import game_logic
+                    game_logic.toggle_fullscreen()
+                elif event.key in (pygame.K_RETURN, pygame.K_r):
                     return "restart"
-                if event.key == pygame.K_ESCAPE:
+                elif event.key == pygame.K_ESCAPE:
                     return "menu"
 
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:

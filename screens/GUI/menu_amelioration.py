@@ -109,6 +109,11 @@ def afficher_menu_amelioration(ecran, batiment, clic_x, player):
                 pygame.quit()
                 sys.exit()
 
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
+                from screens import game_logic
+                game_logic.toggle_fullscreen()
+                continue
+
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if btn_fermer.clic():
                     en_menu = False

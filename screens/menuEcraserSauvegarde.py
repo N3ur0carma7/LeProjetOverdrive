@@ -24,6 +24,10 @@ def confirmation_ecraser(ecran, horloge, FPS):
                 return False
             elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
                 return "menu"
+            elif event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
+                from screens import game_logic
+                game_logic.toggle_fullscreen()
+                continue
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 if boutons[0].clic():
                     if os.path.exists("save/save.json"):

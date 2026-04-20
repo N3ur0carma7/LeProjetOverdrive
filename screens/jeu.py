@@ -328,6 +328,11 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
                 dims[0], dims[1] = event.w, event.h
                 rects_icones[:] = calculer_rects_icones(dims, HAUTEUR_BARRE, TAILLE_ICONE, int(slide_offset))
 
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_F11:
+                from screens import game_logic
+                game_logic.toggle_fullscreen()
+                continue
+
             # terminal toggle
             if event.type == pygame.KEYDOWN and event.unicode == "²":
                 terminal.toggle()

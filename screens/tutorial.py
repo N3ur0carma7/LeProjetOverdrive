@@ -130,7 +130,10 @@ def run_tutorial(ecran, horloge, FPS, draw_background_fn=None):
                 return False
 
             if event.type == pygame.KEYDOWN:
-                if event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+                if event.key == pygame.K_F11:
+                    from screens import game_logic
+                    game_logic.toggle_fullscreen()
+                elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
                     char_idx = len(current_text)
 
                 elif event.key == pygame.K_SPACE:
