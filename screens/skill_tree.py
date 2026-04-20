@@ -5,10 +5,6 @@ from core.Class.batiments import Batiment
 
 from core.Class.skill_levels import get_max_level, set_max_level, MAX_LEVELS
 
-# ---------------------------------------------------------------------------
-# SKILL DATA
-# ---------------------------------------------------------------------------
-
 SKILLS_DATA = {
     "combat": {
         "name": "Combat",
@@ -33,7 +29,6 @@ SKILLS_DATA = {
         "color": (50, 220, 80),
         "skills": [
 
-            # ROOT
             {
                 "id": "building_upgrade_residential_2",
                 "name": "Maison Niv.2",
@@ -47,7 +42,6 @@ SKILLS_DATA = {
                 "large": True,
             },
 
-            # SECOND LAYER
             {
                 "id": "building_upgrade_gen_2",
                 "name": "Generateur Niv.2",
@@ -82,7 +76,6 @@ SKILLS_DATA = {
                 "pos": (0.25, 0.60),
             },
 
-            # THIRD LAYER
             {
                 "id": "building_upgrade_gen_3",
                 "name": "Generateur Niv.3",
@@ -128,7 +121,6 @@ SKILLS_DATA = {
                 "pos": (0.35, 0.25),
             },
 
-            # ADVANCED
             {
                 "id": "mine_upgrade",
                 "name": "Mine Avancee",
@@ -184,10 +176,6 @@ SKILLS_DATA = {
     },
 }
 
-# ---------------------------------------------------------------------------
-# HELPERS
-# ---------------------------------------------------------------------------
-
 def is_skill_unlocked(skill_id, unlocked_skills):
     return skill_id in unlocked_skills
 
@@ -195,9 +183,7 @@ def is_skill_unlocked(skill_id, unlocked_skills):
 def apply_skill_effect(skill, player, batiments_data):
     effect = skill["effect"]
     if effect == "unlock_building_upgrade":
-        # Raise the global level cap for this building type
         set_max_level(skill["building_type"], skill["max_level"])
-        # Also update batiments_data for any other systems that read it
         batiments_data[skill["building_type"]]["max_level"] = skill["max_level"]
     elif effect == "unlock_new_building":
         batiments_data[skill["building_type"]] = {"unlocked": True}
@@ -224,10 +210,6 @@ def apply_skill_effect(skill, player, batiments_data):
     elif effect == "unlock_pet":
         player.has_pet = True
 
-
-# ---------------------------------------------------------------------------
-# DRAWING UTILITIES
-# ---------------------------------------------------------------------------
 
 def draw_glow_line(surface, color, start, end, width=3, alpha=180):
     glow_surf = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
@@ -317,10 +299,6 @@ def draw_popup(surface, skill, state, player_vapeur, font_title, font_body, cat_
     return btn_rect if can_buy else None
 
 
-# ---------------------------------------------------------------------------
-# MAIN FUNCTION
-# ---------------------------------------------------------------------------
-
 def afficher_skill_tree(ecran, player, unlocked_skills, batiments_data):
     en_menu = True
     horloge = pygame.time.Clock()
@@ -338,12 +316,10 @@ def afficher_skill_tree(ecran, player, unlocked_skills, batiments_data):
 
     W, H = ecran.get_size()
 
-    # ---------------- CAMERA ----------------
     camera_x, camera_y = 0, 0
     dragging = False
     last_mouse_pos = (0, 0)
 
-    # ---------------- SKILLS ----------------
     all_skills = []
     for cat_id, cat_data in SKILLS_DATA.items():
         for skill in cat_data["skills"]:
@@ -371,7 +347,6 @@ def afficher_skill_tree(ecran, player, unlocked_skills, batiments_data):
     while en_menu:
         mx, my = pygame.mouse.get_pos()
 
-        # -------- INPUT --------
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -390,7 +365,6 @@ def afficher_skill_tree(ecran, player, unlocked_skills, batiments_data):
                     dragging = False
                     last_mouse_pos = event.pos
 
-                    # CLICK SKILL
                     clicked = False
                     for skill in all_skills:
                         cx = skill["screen_pos"][0] + camera_x
@@ -424,7 +398,7 @@ def afficher_skill_tree(ecran, player, unlocked_skills, batiments_data):
                     camera_y += dy
                     last_mouse_pos = event.pos
 
-        # -------- KEYBOARD CAMERA --------
+#bouger avec fleches
         keys = pygame.key.get_pressed()
         if keys[pygame.K_LEFT]:
             camera_x += 10
@@ -435,10 +409,8 @@ def afficher_skill_tree(ecran, player, unlocked_skills, batiments_data):
         if keys[pygame.K_DOWN]:
             camera_y -= 10
 
-        # -------- DRAW --------
         ecran.blit(bg_surf, (0, 0))
 
-        # ---- DRAW LINES ----
         for skill in all_skills:
             for prereq_id in skill["prerequisites"]:
                 if prereq_id not in skill_index:
@@ -462,7 +434,6 @@ def afficher_skill_tree(ecran, player, unlocked_skills, batiments_data):
                 else:
                     pygame.draw.line(ecran, (60, 60, 75), start, end, 2)
 
-        # ---- DRAW NODES ----
         for skill in all_skills:
             cx = skill["screen_pos"][0] + camera_x
             cy = skill["screen_pos"][1] + camera_y
@@ -483,7 +454,7 @@ def afficher_skill_tree(ecran, player, unlocked_skills, batiments_data):
             if selected_skill and selected_skill["id"] == skill["id"]:
                 pygame.draw.circle(ecran, (255, 255, 255), (cx, cy), r + 5, 2)
 
-        # ---- UI ----
+#UI
         vapeur_surf = font_body.render(f"Vapeur : {int(player.vapeur)}", True, (240, 190, 40))
         ecran.blit(vapeur_surf, (W - vapeur_surf.get_width() - 20, 16))
 

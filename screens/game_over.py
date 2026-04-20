@@ -1,13 +1,9 @@
-"""
-Ecran de mort du joueur.
-Affiche une animation + boutons Recommencer / Menu principal.
-"""
 
 import pygame
 import math
 
 
-def afficher_game_over(ecran: pygame.Surface, font_path: str = "assets/fonts/Minecraft.ttf") -> str:
+def afficher_game_over(ecran: pygame.Surface, player=None, font_path: str = "assets/fonts/Minecraft.ttf") -> str:
     dims = ecran.get_size()
     W, H = dims
 
@@ -22,7 +18,6 @@ def afficher_game_over(ecran: pygame.Surface, font_path: str = "assets/fonts/Min
 
     screenshot = ecran.copy()
 
-    # --- Chargement boutons images ---
     btn_restart_img      = pygame.image.load("assets/buttons/menu/continuer_normal.png").convert_alpha()
     btn_restart_hover    = pygame.image.load("assets/buttons/menu/continuer_hover.png").convert_alpha()
     btn_menu_img         = pygame.image.load("assets/buttons/menu/menu_principal_normal.png").convert_alpha()
@@ -33,10 +28,9 @@ def afficher_game_over(ecran: pygame.Surface, font_path: str = "assets/fonts/Min
     btn_menu_img      = pygame.transform.scale(btn_menu_img, (260, 70))
     btn_menu_hover    = pygame.transform.scale(btn_menu_hover, (260, 70))
 
-    btn_restart = btn_restart_img.get_rect(center=(W // 2, H // 2 + 130))
-    btn_menu    = btn_menu_img.get_rect(center=(W // 2, H // 2 + 210))
+    btn_restart = btn_restart_img.get_rect(center=(W // 2, H // 2 + 160))
+    btn_menu    = btn_menu_img.get_rect(center=(W // 2, H // 2 + 240))
 
-    # Animation
     t = 0.0
     FADE_IN = 1.2
     SKULL_ANIM = 1.8
@@ -68,7 +62,6 @@ def afficher_game_over(ecran: pygame.Surface, font_path: str = "assets/fonts/Min
             _spawn_particles()
             spawned = True
 
-        # --- Events ---
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 return "quit"
@@ -88,7 +81,6 @@ def afficher_game_over(ecran: pygame.Surface, font_path: str = "assets/fonts/Min
 
         alpha = min(1.0, t / FADE_IN)
 
-        # --- Background ---
         overlay = screenshot.copy()
 
         dark = pygame.Surface((W, H), pygame.SRCALPHA)
@@ -101,7 +93,6 @@ def afficher_game_over(ecran: pygame.Surface, font_path: str = "assets/fonts/Min
 
         ecran.blit(overlay, (0, 0))
 
-        # --- Particles ---
         for p in particles[:]:
             p[0] += p[2] * dt
             p[1] += p[3] * dt
@@ -120,7 +111,6 @@ def afficher_game_over(ecran: pygame.Surface, font_path: str = "assets/fonts/Min
             pygame.draw.circle(s, (*p[6], a), (r, r), r)
             ecran.blit(s, (int(p[0]) - r, int(p[1]) - r))
 
-        # --- Skull ---
         skull_t  = min(1.0, t / SKULL_ANIM)
         skull_scale = 0.3 + 0.7 * (1 - (1 - skull_t) ** 3)
         skull_alpha = int(255 * min(1.0, skull_t * 2))
@@ -130,14 +120,13 @@ def afficher_game_over(ecran: pygame.Surface, font_path: str = "assets/fonts/Min
                     int(80 * skull_scale * pulse),
                     skull_alpha)
 
-        # --- Title ---
         title_alpha = int(255 * max(0.0, (t - 0.5) / 0.8))
 
         title = font_big.render("VOUS ETES MORT", True, (220, 40, 40))
         title.set_alpha(title_alpha)
         ecran.blit(title, (W // 2 - title.get_width() // 2, H // 2 - 10))
 
-        # --- Subtitle ---
+
         if t > 1.2:
             blink = int((math.sin(t * 3) + 1) / 2 * 180) + 60
             sub = font_small.render(
@@ -146,7 +135,22 @@ def afficher_game_over(ecran: pygame.Surface, font_path: str = "assets/fonts/Min
             )
             ecran.blit(sub, (W // 2 - sub.get_width() // 2, H // 2 + 40))
 
-        # --- Buttons ---
+            # pénalité
+            penalty_surf = font_small.render(
+                "PENALITE : -30% de toutes vos ressources",
+                True, (220, 100, 30)
+            )
+            ecran.blit(penalty_surf, (W // 2 - penalty_surf.get_width() // 2, H // 2 + 68))
+
+            if player is not None:
+                res_font = pygame.font.Font(font_path, 13) if True else font_small
+                or_val   = max(0, int(player.money  * 0.70))
+                food_val = max(0, int(player.food   * 0.70))
+                vap_val  = max(0, int(player.vapeur * 0.70))
+                res_txt  = f"Or : {player.money} → {or_val}    Nourriture : {player.food} → {food_val}    Vapeur : {player.vapeur} → {vap_val}"
+                res_surf = res_font.render(res_txt, True, (180, 180, 180))
+                ecran.blit(res_surf, (W // 2 - res_surf.get_width() // 2, H // 2 + 92))
+
         if t > 1.0:
             mx, my = pygame.mouse.get_pos()
 
@@ -158,10 +162,6 @@ def afficher_game_over(ecran: pygame.Surface, font_path: str = "assets/fonts/Min
 
         pygame.display.flip()
 
-
-# ---------------------------------------------------------------------------
-# Skull dessin
-# ---------------------------------------------------------------------------
 
 def _draw_skull(surface: pygame.Surface, cx: int, cy: int, size: int, alpha: int):
     if size < 10:

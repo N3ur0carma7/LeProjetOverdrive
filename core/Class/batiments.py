@@ -91,7 +91,6 @@ class Batiment:
             self.niveau += 1
 
     def est_max_level(self):
-        """True if no more upgrades are available."""
         if self.niveau >= 3:
             return True
         cap = get_max_level(self.type)

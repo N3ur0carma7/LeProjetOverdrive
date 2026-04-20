@@ -87,8 +87,7 @@ def dessiner_grille_overlay_ecran(ecran, camera_x, camera_y, dims, hauteur_ui, z
     hauteur_ui: hauteur (en px écran) occupée par l'UI en bas (on ne dessine pas dessus).
     """
     couleur_grille = (150, 120, 84)
-    # Épaisseur simple et stable; éviter les variations trop agressives selon le zoom.
-    epaisseur = 1 if zoom < 1.35 else 2
+    epaisseur = 1
 
     w, h = int(dims[0]), int(dims[1])
     h_monde = max(0, h - int(hauteur_ui))
