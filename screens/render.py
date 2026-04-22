@@ -90,6 +90,7 @@ def dessiner_monde(surface_monde, batiments, images_batiments, camera_x, camera_
         raid_manager.draw(surface_monde, camera_x, camera_y)
 
 def dessiner_hud(ecran, dims, HAUTEUR_BARRE, rects_icones, batiment_selectionne, images_batiments, TYPES_BATIMENTS, TAILLE_ICONE, player, font_argent, hud_or_img, hud_food_img, hud_vapeur_img, save_done_img, save_done_timer, barre_ouverte=True, slide_offset=0, btn_batiments_rect=None, skill_btn_rect=None, raid_manager=None):
+    from core.Class.batiments import Batiment
     if slide_offset < HAUTEUR_BARRE:
         barre_surf = pygame.Surface((dims[0], HAUTEUR_BARRE), pygame.SRCALPHA)
         barre_surf.fill((30, 30, 30, 210))
@@ -104,6 +105,10 @@ def dessiner_hud(ecran, dims, HAUTEUR_BARRE, rects_icones, batiment_selectionne,
             images_batiments[type_actuel][1], (TAILLE_ICONE, TAILLE_ICONE)
         )
         ecran.blit(icone, rect)
+
+        prix = Batiment.DATA[type_actuel][1]["cout"]
+        texte_prix = font_argent.render(str(prix), True, (255, 255, 255))
+        ecran.blit(texte_prix, (rect.centerx - texte_prix.get_width() // 2, rect.y - texte_prix.get_height() - 2))
 
     # bouton toggle barre bâtiments
     BTN_SIZE = 80

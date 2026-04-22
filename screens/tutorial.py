@@ -2,14 +2,25 @@ import pygame
 import os
 
 STEPS = [
-    "Bienvenue dans Overdrive ! Cette ville est a toi. Construit, developpe, et prospere.",
-    "Utilise le clic GAUCHE pour placer des batiments depuis la barre du bas.",
-    "Les batiments de PRODUCTION (mine, ferme, generateur) necessitent des villageois.",
-    "Reste a portee dans un carre de 2 cases pour placer ou interagir avec un batiment.",
-    "Scroll molette pour zoomer. Clic molette pour deplacer la camera.",
-    "Appuie sur ECHAP pour acceder au menu pause et sauvegarder ta partie.",
-    "Tes villageois ont besoin d'une MAISON pour vivre. Commence par en construire une !",
-    "Bonne chance, aventurier ! Appuie sur ENTREE pour commencer l'aventure.",
+    "Bienvenue dans Overdrive ! Cette ville est maintenant a toi.",
+
+    "Pour commencer, ouvre le MENU CONSTRUCTION en bas de l'ecran.",
+
+    "Choisis un batiment dans la barre puis clique sur la grille pour le placer.",
+
+    "Chaque batiment possede une portee indiquee en Cases.",
+
+    "Tes villageois produisent des Ressources. Sans eux, rien ne fonctionne !",
+
+    "Pour fonctionner, un batiment a besoin de VILLAGEOIS dans sa portee.",
+
+    "Les MAISONS logent tes villagers. Place-en une pres de tes batiments.",
+
+    "CONTROLES : Clic GAUCHE pour placer et se déplacer. MOLETTE pour zoomer.",
+
+    "CONTROLES : ECHAP pour le menu pause. ENTREE pour continuer.",
+
+    "Commence par construire une MAISON. Bonne aventure !",
 ]
 
 # Durée d'affichage de chaque caractère
