@@ -74,6 +74,21 @@ def afficher_menu_amelioration(ecran, batiment, clic_x, player):
             val_actuelle = batiment.get_production()
             if not batiment.est_max_level():
                 val_suivante = Batiment.DATA[batiment.type][batiment.niveau + 1]["vapeur"]
+        elif batiment.type == Batiment.TYPE_STOCKAGE_OR:
+            info = "Stockage Or"
+            val_actuelle = batiment.get_storage()
+            if not batiment.est_max_level():
+                val_suivante = Batiment.DATA[batiment.type][batiment.niveau + 1]["stockage"]
+        elif batiment.type == Batiment.TYPE_STOCKAGE_NOUR:
+            info = "Stockage Nour"
+            val_actuelle = batiment.get_storage()
+            if not batiment.est_max_level():
+                val_suivante = Batiment.DATA[batiment.type][batiment.niveau + 1]["stockage"]
+        elif batiment.type == Batiment.TYPE_STOCKAGE_VAPEUR:
+            info = "Stockage Vapeur"
+            val_actuelle = batiment.get_storage()
+            if not batiment.est_max_level():
+                val_suivante = Batiment.DATA[batiment.type][batiment.niveau + 1]["stockage"]
         else:
             info = "Production"
             val_actuelle = batiment.get_production()
@@ -124,6 +139,9 @@ def afficher_menu_amelioration(ecran, batiment, clic_x, player):
                         sound.son_upgrade.play()
                         player.money -= upgrade_cost
                         batiment.upgrade()
+                        if batiment.type in (Batiment.TYPE_STOCKAGE_OR, Batiment.TYPE_STOCKAGE_NOUR, Batiment.TYPE_STOCKAGE_VAPEUR):
+                            from screens.jeu import batiments as global_batiments
+                            player.recalculate_storage(global_batiments)
                         en_menu = False
                         return "upgrade"
                     else:

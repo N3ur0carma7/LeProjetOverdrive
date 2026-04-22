@@ -105,10 +105,10 @@ class MatrixRain:
 
 #commandes du terminal
 def cmd_godlike(args, player, batiments, **ctx):
-    player.money  += 10_000
-    player.food   += 10_000
-    player.vapeur += 10_000
-    return "[OK] +10 000 or, nourriture, vapeur"
+    player.money = player.cap_money
+    player.food = player.cap_food
+    player.vapeur = player.cap_vapeur
+    return "[OK] Capacites remplies"
 
 def cmd_give(args, player, batiments, **ctx):
     ressources = {"or": "money", "food": "food", "vapeur": "vapeur",

@@ -56,8 +56,8 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
     images_batiments = {
         Batiment.TYPE_RESIDENTIEL: {
             1: pygame.image.load("assets/buildings/house_lvl1.png").convert_alpha(),
-            2: pygame.image.load("assets/buildings/house_lvl2.png").convert_alpha(),  # Image niveau 2
-            3: pygame.image.load("assets/buildings/house_lvl3.png").convert_alpha()  # Image niveau 3
+            2: pygame.image.load("assets/buildings/house_lvl2.png").convert_alpha(),
+            3: pygame.image.load("assets/buildings/house_lvl3.png").convert_alpha()
         },
         Batiment.TYPE_GENERATEUR: {
             1: pygame.image.load("assets/buildings/generateur_lvl1.png").convert_alpha(),
@@ -73,7 +73,32 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
             1: corriger_transparence(pygame.image.load("assets/buildings/farm_lvl1.png").convert_alpha()),
             2: corriger_transparence(pygame.image.load("assets/buildings/farm_lvl2.png").convert_alpha()),
             3: corriger_transparence(pygame.image.load("assets/buildings/farm_lvl3.png").convert_alpha())
+        },
+        Batiment.TYPE_STOCKAGE_OR: {
+            1: pygame.image.load("assets/buildings/house_lvl1.png").convert_alpha(),
+            2: pygame.image.load("assets/buildings/house_lvl2.png").convert_alpha(),
+            3: pygame.image.load("assets/buildings/house_lvl3.png").convert_alpha()
+        },
+        Batiment.TYPE_STOCKAGE_NOUR: {
+            1: pygame.image.load("assets/buildings/house_lvl1.png").convert_alpha(),
+            2: pygame.image.load("assets/buildings/house_lvl2.png").convert_alpha(),
+            3: pygame.image.load("assets/buildings/house_lvl3.png").convert_alpha()
+        },
+        Batiment.TYPE_STOCKAGE_VAPEUR: {
+            1: pygame.image.load("assets/buildings/house_lvl1.png").convert_alpha(),
+            2: pygame.image.load("assets/buildings/house_lvl2.png").convert_alpha(),
+            3: pygame.image.load("assets/buildings/house_lvl3.png").convert_alpha()
         }
+    }
+
+    batiments_data = {
+        Batiment.TYPE_RESIDENTIEL: {"unlocked": True},
+        Batiment.TYPE_GENERATEUR: {"unlocked": True},
+        Batiment.TYPE_MINE: {"unlocked": True},
+        Batiment.TYPE_FARM: {"unlocked": True},
+        Batiment.TYPE_STOCKAGE_OR: {"unlocked": False},
+        Batiment.TYPE_STOCKAGE_NOUR: {"unlocked": False},
+        Batiment.TYPE_STOCKAGE_VAPEUR: {"unlocked": False},
     }
 
     TYPES_BATIMENTS = [
@@ -81,6 +106,9 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
         Batiment.TYPE_GENERATEUR,
         Batiment.TYPE_MINE,
         Batiment.TYPE_FARM,
+        Batiment.TYPE_STOCKAGE_OR,
+        Batiment.TYPE_STOCKAGE_NOUR,
+        Batiment.TYPE_STOCKAGE_VAPEUR,
     ]
 
     TAILLE_ICONE = 64
@@ -344,7 +372,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
 
                 if skill_btn_rect.collidepoint(sx, sy):
                     from screens.skill_tree import afficher_skill_tree
-                    unlocked_skills = afficher_skill_tree(ecran, player, unlocked_skills, Batiment.DATA)
+                    unlocked_skills = afficher_skill_tree(ecran, player, unlocked_skills, batiments_data)
                     continue
 
                 clic_barre = False
@@ -437,6 +465,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
                             players[indice].money -= cout
                             batiments.append(nouveau)
                             sound.son_placement.play()
+                            players[indice].recalculate_storage(batiments)
                             synchroniser_npcs(batiments, npcs, players[indice], TAILLE_CASE)
                             if client_module.CLIENT is not None and online:
                                 print(f"envoi en cours {batiments}")
@@ -568,7 +597,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
 
         float_msg.update(dt)
 
-        dessiner_hud(ecran, dims, HAUTEUR_BARRE, rects_icones, batiment_selectionne, images_batiments, TYPES_BATIMENTS, TAILLE_ICONE, player, font_argent, hud_or_img, hud_food_img, hud_vapeur_img, save_done_img, save_done_timer, barre_ouverte, int(slide_offset), btn_batiments_rect, skill_btn_rect, raid_manager=raid_manager)
+        dessiner_hud(ecran, dims, HAUTEUR_BARRE, rects_icones, batiment_selectionne, images_batiments, TYPES_BATIMENTS, TAILLE_ICONE, player, font_argent, hud_or_img, hud_food_img, hud_vapeur_img, save_done_img, save_done_timer, barre_ouverte, int(slide_offset), btn_batiments_rect, skill_btn_rect, batiments_data, raid_manager=raid_manager)
 
         float_msg.draw(ecran)
 

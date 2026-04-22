@@ -32,9 +32,12 @@ ANIM_FPS = {
 class Player:
     _sheets: dict = {}   # {name: pygame.Surface}
 
-    START_MONEY  = 1500
-    START_FOOD   = 100
-    START_VAPEUR = 40
+    START_MONEY      = 1000
+    START_FOOD       = 200
+    START_VAPEUR     = 300
+    START_CAP_MONEY  = 1000
+    START_CAP_FOOD   = 200
+    START_CAP_VAPEUR = 300
 
     @classmethod
     def load_sprites(cls):
@@ -54,14 +57,14 @@ class Player:
         self.raw_damage   = 10
         self.defense      = 0
         self.health_regen = 1
-        self.money  = Player.START_MONEY
-        self.food   = Player.START_FOOD
-        self.vapeur = Player.START_VAPEUR
+        self.money        = Player.START_MONEY
+        self.food         = Player.START_FOOD
+        self.vapeur       = Player.START_VAPEUR
+        self.cap_money   = Player.START_CAP_MONEY
+        self.cap_food     = Player.START_CAP_FOOD
+        self.cap_vapeur   = Player.START_CAP_VAPEUR
         self.pos    = (0, 0)
         self.path   = []
-
-        self.speed = 420   # px/s
-        self.size  = 40
 
         # Animation
         self.direction  = "right"   # "right" | "left"
@@ -77,7 +80,26 @@ class Player:
 
         self.sprite_height = 128
 
-    # ------------------------------------------------------------------
+        self.speed = 420
+        self.size  = 40
+
+    def recalculate_storage(self, batiments_list):
+        cap_or = Player.START_CAP_MONEY
+        cap_food = Player.START_CAP_FOOD
+        cap_vapeur = Player.START_CAP_VAPEUR
+        for b in batiments_list:
+            storage = b.get_storage()
+            if storage > 0:
+                rtype = b.type
+                if rtype == Batiment.TYPE_STOCKAGE_OR:
+                    cap_or = storage
+                elif rtype == Batiment.TYPE_STOCKAGE_NOUR:
+                    cap_food = storage
+                elif rtype == Batiment.TYPE_STOCKAGE_VAPEUR:
+                    cap_vapeur = storage
+        self.cap_money = cap_or
+        self.cap_food = cap_food
+        self.cap_vapeur = cap_vapeur
     def trigger_attack_anim(self):
         """Declenche l'animation hand_cannon pour un cycle complet."""
         self._attack_anim_active = True
@@ -236,6 +258,9 @@ class Player:
             "raw_damage": self.raw_damage, "defense": self.defense,
             "health_regen": self.health_regen, "money": self.money,
             "food": self.food, "vapeur": self.vapeur,
+            "cap_money": self.cap_money,
+            "cap_food": self.cap_food,
+            "cap_vapeur": self.cap_vapeur,
             "pos": self.pos, "path": self.path,
             "speed": self.speed, "size": self.size,
         }
@@ -250,9 +275,12 @@ class Player:
         obj.raw_damage   = d.get("raw_damage",      1)
         obj.defense      = d.get("defense",         0)
         obj.health_regen = d.get("health_regen",    1)
-        obj.money        = d.get("money",        5000)
-        obj.food         = d.get("food",            0)
-        obj.vapeur       = d.get("vapeur",          0)
+        obj.money        = d.get("money",        1000)
+        obj.food         = d.get("food",            200)
+        obj.vapeur       = d.get("vapeur",          300)
+        obj.cap_money   = d.get("cap_money",       1000)
+        obj.cap_food    = d.get("cap_food",          200)
+        obj.cap_vapeur   = d.get("cap_vapeur",        300)
         obj.pos          = d.get("pos",          (0, 0))
         obj.path         = d.get("path",           [])
         obj.speed        = d.get("speed",         420)

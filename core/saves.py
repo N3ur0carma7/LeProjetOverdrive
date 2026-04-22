@@ -21,6 +21,9 @@ def save_game(buildings: list, player: Player, online_data):
                 "money": player.money,
                 "food": player.food,
                 "vapeur": player.vapeur,
+                "cap_money": player.cap_money,
+                "cap_food": player.cap_food,
+                "cap_vapeur": player.cap_vapeur,
                 "pos": player.pos
             },
             "Builds": batiments_real,
@@ -50,6 +53,9 @@ def load_save(buildings: list, player: Player):
         player.money = save_data["Player"]["money"]
         player.food = save_data["Player"].get("food", 0)
         player.vapeur = save_data["Player"].get("vapeur", 0)
+        player.cap_money = save_data["Player"].get("cap_money", 1000)
+        player.cap_food = save_data["Player"].get("cap_food", 200)
+        player.cap_vapeur = save_data["Player"].get("cap_vapeur", 300)
         player.pos = save_data["Player"]["pos"]
         # Loading buildings data
         for b in save_data["Builds"]:

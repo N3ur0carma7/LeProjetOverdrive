@@ -89,7 +89,9 @@ def dessiner_monde(surface_monde, batiments, images_batiments, camera_x, camera_
     if raid_manager is not None:
         raid_manager.draw(surface_monde, camera_x, camera_y)
 
-def dessiner_hud(ecran, dims, HAUTEUR_BARRE, rects_icones, batiment_selectionne, images_batiments, TYPES_BATIMENTS, TAILLE_ICONE, player, font_argent, hud_or_img, hud_food_img, hud_vapeur_img, save_done_img, save_done_timer, barre_ouverte=True, slide_offset=0, btn_batiments_rect=None, skill_btn_rect=None, raid_manager=None):
+def dessiner_hud(ecran, dims, HAUTEUR_BARRE, rects_icones, batiment_selectionne, images_batiments, TYPES_BATIMENTS, TAILLE_ICONE, player, font_argent, hud_or_img, hud_food_img, hud_vapeur_img, save_done_img, save_done_timer, barre_ouverte=True, slide_offset=0, btn_batiments_rect=None, skill_btn_rect=None, batiments_data=None, raid_manager=None):
+    if batiments_data is None:
+        batiments_data = {}
     from core.Class.batiments import Batiment
     if slide_offset < HAUTEUR_BARRE:
         barre_surf = pygame.Surface((dims[0], HAUTEUR_BARRE), pygame.SRCALPHA)
@@ -97,10 +99,21 @@ def dessiner_hud(ecran, dims, HAUTEUR_BARRE, rects_icones, batiment_selectionne,
         ecran.blit(barre_surf, (0, dims[1] - HAUTEUR_BARRE + slide_offset))
 
     for i, rect in enumerate(rects_icones):
+        if i >= len(TYPES_BATIMENTS):
+            break
+        type_actuel = TYPES_BATIMENTS[i]
+        if type_actuel not in images_batiments:
+            continue
+        data = batiments_data.get(type_actuel, {})
+        if not data.get("unlocked", True):
+            pygame.draw.rect(ecran, (40, 40, 50), rect.inflate(8, 8))
+            pygame.draw.line(ecran, (80, 40, 40), (rect.left + 4, rect.top + 4), (rect.right - 4, rect.bottom - 4), 2)
+            pygame.draw.line(ecran, (80, 40, 40), (rect.right - 4, rect.top + 4), (rect.left + 4, rect.bottom - 4), 2)
+            continue
+
         couleur = (200, 200, 80) if i == batiment_selectionne else (100, 100, 100)
         pygame.draw.rect(ecran, couleur, rect.inflate(8, 8))
 
-        type_actuel = TYPES_BATIMENTS[i]
         icone = pygame.transform.smoothscale(
             images_batiments[type_actuel][1], (TAILLE_ICONE, TAILLE_ICONE)
         )
@@ -153,9 +166,9 @@ def dessiner_hud(ecran, dims, HAUTEUR_BARRE, rects_icones, batiment_selectionne,
     hud_y = marge_hud
 
     ressources_hud = [
-        (str(player.money),  (255, 235,  80), hud_or_img),
-        (str(player.food),   ( 255, 235,  80), hud_food_img),
-        (str(player.vapeur), (255, 235, 80), hud_vapeur_img),
+        (f"{player.money}/{player.cap_money}",  (255, 235,  80), hud_or_img),
+        (f"{player.food}/{player.cap_food}",   ( 255, 235,  80), hud_food_img),
+        (f"{player.vapeur}/{player.cap_vapeur}", (255, 235, 80), hud_vapeur_img),
     ]
 
     for i, (valeur, couleur, img) in enumerate(ressources_hud):

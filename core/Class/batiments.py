@@ -6,6 +6,9 @@ class Batiment:
     TYPE_GENERATEUR  = "generateur"
     TYPE_MINE        = "mine"
     TYPE_FARM        = "farm"
+    TYPE_STOCKAGE_OR        = "stockage_or"
+    TYPE_STOCKAGE_NOUR     = "stockage_nour"
+    TYPE_STOCKAGE_VAPEUR   = "stockage_vapeur"
     DATA = {
         TYPE_RESIDENTIEL: {
             1: {"population": 1, "cout": 125},
@@ -26,6 +29,21 @@ class Batiment:
             1: {"nourriture": 30,  "cout": 150},
             2: {"nourriture": 60,  "cout": 400},
             3: {"nourriture": 120, "cout": 800},
+        },
+        TYPE_STOCKAGE_OR: {
+            1: {"stockage": 1500, "cout": 300},
+            2: {"stockage": 2000, "cout": 700},
+            3: {"stockage": 3000, "cout": 1500},
+        },
+        TYPE_STOCKAGE_NOUR: {
+            1: {"stockage": 300, "cout": 250},
+            2: {"stockage": 500, "cout": 600},
+            3: {"stockage": 1000, "cout": 1200},
+        },
+        TYPE_STOCKAGE_VAPEUR: {
+            1: {"stockage": 500, "cout": 350},
+            2: {"stockage": 800, "cout": 800},
+            3: {"stockage": 1500, "cout": 1600},
         },
     }
 
@@ -52,6 +70,10 @@ class Batiment:
             self.largeur * TAILLE_CASE,
             self.hauteur * TAILLE_CASE
         )
+
+    def get_storage(self):
+        stats = self.get_stats()
+        return stats.get("stockage", 0)
 
     def get_production(self):
         stats = self.get_stats()

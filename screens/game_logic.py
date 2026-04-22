@@ -123,17 +123,23 @@ def calculer_production(batiments_list, player, delta_time, acc_argent, acc_food
 
     gains_argent = int(acc_argent)
     if gains_argent > 0:
-        player.money += gains_argent
-        acc_argent -= gains_argent
+        new_money = player.money + gains_argent
+        player.money = min(new_money, player.cap_money)
+        overflow = new_money - player.cap_money
+        acc_argent -= (gains_argent - max(0, overflow))
 
     gains_food = int(acc_food)
     if gains_food > 0:
-        player.food += gains_food
-        acc_food -= gains_food
+        new_food = player.food + gains_food
+        player.food = min(new_food, player.cap_food)
+        overflow = new_food - player.cap_food
+        acc_food -= (gains_food - max(0, overflow))
 
     gains_vapeur = int(acc_vapeur)
     if gains_vapeur > 0:
-        player.vapeur += gains_vapeur
-        acc_vapeur -= gains_vapeur
+        new_vapeur = player.vapeur + gains_vapeur
+        player.vapeur = min(new_vapeur, player.cap_vapeur)
+        overflow = new_vapeur - player.cap_vapeur
+        acc_vapeur -= (gains_vapeur - max(0, overflow))
 
     return acc_argent, acc_food, acc_vapeur

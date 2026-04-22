@@ -120,7 +120,6 @@ SKILLS_DATA = {
                 "max_level": 3,
                 "pos": (0.35, 0.25),
             },
-
             {
                 "id": "mine_upgrade",
                 "name": "Mine Avancee",
@@ -160,8 +159,104 @@ SKILLS_DATA = {
                 "effect": "player_stat",
                 "stat": "hp_max",
                 "value": 50,
-                "pos": (0.50, 0.65),  # CENTER DOWN
+                "pos": (0.50, 0.60),
                 "large": True,
+            },
+            {
+                "id": "unlock_stockage_or",
+                "name": "Entrepot Or",
+                "description": "Permet de construire des entrepots d'or.",
+                "cost": 150,
+                "prerequisites": ["health_upgrade"],
+                "effect": "unlock_building_type",
+                "building_type": Batiment.TYPE_STOCKAGE_OR,
+                "pos": (0.30, 0.75),
+            },
+            {
+                "id": "building_upgrade_stockage_or_2",
+                "name": "Entrepot Or Niv.2",
+                "description": "Augmente le stockage d'or a 2000.",
+                "cost": 200,
+                "prerequisites": ["unlock_stockage_or"],
+                "effect": "unlock_building_upgrade",
+                "building_type": Batiment.TYPE_STOCKAGE_OR,
+                "max_level": 2,
+                "pos": (0.25, 0.90),
+            },
+            {
+                "id": "building_upgrade_stockage_or_3",
+                "name": "Entrepot Or Niv.3",
+                "description": "Augmente le stockage d'or a 3000.",
+                "cost": 400,
+                "prerequisites": ["building_upgrade_stockage_or_2"],
+                "effect": "unlock_building_upgrade",
+                "building_type": Batiment.TYPE_STOCKAGE_OR,
+                "max_level": 3,
+                "pos": (0.20, 1.05),
+            },
+            {
+                "id": "unlock_stockage_nour",
+                "name": "Entrepot Nourriture",
+                "description": "Permet de construire des entrepots de nourriture.",
+                "cost": 150,
+                "prerequisites": ["health_upgrade"],
+                "effect": "unlock_building_type",
+                "building_type": Batiment.TYPE_STOCKAGE_NOUR,
+                "pos": (0.50, 0.75),
+            },
+            {
+                "id": "building_upgrade_stockage_nour_2",
+                "name": "Entrepot Nourriture Niv.2",
+                "description": "Augmente le stockage de nourriture a 500.",
+                "cost": 200,
+                "prerequisites": ["unlock_stockage_nour"],
+                "effect": "unlock_building_upgrade",
+                "building_type": Batiment.TYPE_STOCKAGE_NOUR,
+                "max_level": 2,
+                "pos": (0.50, 0.90),
+            },
+            {
+                "id": "building_upgrade_stockage_nour_3",
+                "name": "Entrepot Nourriture Niv.3",
+                "description": "Augmente le stockage de nourriture a 1000.",
+                "cost": 400,
+                "prerequisites": ["building_upgrade_stockage_nour_2"],
+                "effect": "unlock_building_upgrade",
+                "building_type": Batiment.TYPE_STOCKAGE_NOUR,
+                "max_level": 3,
+                "pos": (0.50, 1.05),
+            },
+            {
+                "id": "unlock_stockage_vapeur",
+                "name": "Entrepot Vapeur",
+                "description": "Permet de construire des entrepots de vapeur.",
+                "cost": 150,
+                "prerequisites": ["health_upgrade"],
+                "effect": "unlock_building_type",
+                "building_type": Batiment.TYPE_STOCKAGE_VAPEUR,
+                "pos": (0.70, 0.75),
+            },
+            {
+                "id": "building_upgrade_stockage_vapeur_2",
+                "name": "Entrepot Vapeur Niv.2",
+                "description": "Augmente le stockage de vapeur a 800.",
+                "cost": 200,
+                "prerequisites": ["unlock_stockage_vapeur"],
+                "effect": "unlock_building_upgrade",
+                "building_type": Batiment.TYPE_STOCKAGE_VAPEUR,
+                "max_level": 2,
+                "pos": (0.75, 0.90),
+            },
+            {
+                "id": "building_upgrade_stockage_vapeur_3",
+                "name": "Entrepot Vapeur Niv.3",
+                "description": "Augmente le stockage de vapeur a 1500.",
+                "cost": 400,
+                "prerequisites": ["building_upgrade_stockage_vapeur_2"],
+                "effect": "unlock_building_upgrade",
+                "building_type": Batiment.TYPE_STOCKAGE_VAPEUR,
+                "max_level": 3,
+                "pos": (0.80, 1.05),
             },
             {
                 "id": "pet_unlock",
@@ -170,7 +265,7 @@ SKILLS_DATA = {
                 "cost": 300,
                 "prerequisites": ["health_upgrade"],
                 "effect": "unlock_pet",
-                "pos": (0.50, 0.85),
+                "pos": (0.40, 0.75),
             },
         ]
     },
@@ -186,6 +281,8 @@ def apply_skill_effect(skill, player, batiments_data):
         set_max_level(skill["building_type"], skill["max_level"])
         batiments_data[skill["building_type"]]["max_level"] = skill["max_level"]
     elif effect == "unlock_new_building":
+        batiments_data[skill["building_type"]] = {"unlocked": True}
+    elif effect == "unlock_building_type":
         batiments_data[skill["building_type"]] = {"unlocked": True}
     elif effect == "boost_production":
         building = batiments_data[skill["building_type"]]

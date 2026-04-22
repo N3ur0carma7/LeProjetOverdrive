@@ -6,7 +6,10 @@ MAX_LEVELS = {
     "residentiel": 3,
     "generateur":  3,
     "mine":        3,
-    "farm":       3,
+    "farm":        3,
+    "stockage_or": 3,
+    "stockage_nour": 3,
+    "stockage_vapeur": 3,
 }
 
 def get_max_level(building_type):
