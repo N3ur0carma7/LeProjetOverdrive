@@ -56,8 +56,8 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
     images_batiments = {
         Batiment.TYPE_RESIDENTIEL: {
             1: pygame.image.load("assets/buildings/house_lvl1.png").convert_alpha(),
-            2: pygame.image.load("assets/buildings/house_lvl2.png").convert_alpha(),  # Image niveau 2
-            3: pygame.image.load("assets/buildings/house_lvl3.png").convert_alpha()  # Image niveau 3
+            2: pygame.image.load("assets/buildings/house_lvl2.png").convert_alpha(),
+            3: pygame.image.load("assets/buildings/house_lvl3.png").convert_alpha()
         },
         Batiment.TYPE_GENERATEUR: {
             1: pygame.image.load("assets/buildings/generateur_lvl1.png").convert_alpha(),
@@ -73,14 +73,32 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
             1: corriger_transparence(pygame.image.load("assets/buildings/farm_lvl1.png").convert_alpha()),
             2: corriger_transparence(pygame.image.load("assets/buildings/farm_lvl2.png").convert_alpha()),
             3: corriger_transparence(pygame.image.load("assets/buildings/farm_lvl3.png").convert_alpha())
+        },
+        Batiment.TYPE_TOURELLE: {
+            1: {
+                "S": pygame.image.load("assets/buildings/tourelles_orientation/tourelle_centre_bas.png").convert_alpha(),
+                "N": pygame.image.load("assets/buildings/tourelles_orientation/tourelle_centre_haut.png").convert_alpha(),
+                "E": pygame.image.load("assets/buildings/tourelles_orientation/tourelle_droite.png").convert_alpha(),
+                "W": pygame.image.load("assets/buildings/tourelles_orientation/tourelle_gauche.png").convert_alpha(),
+                "NE": pygame.image.load("assets/buildings/tourelles_orientation/tourelle_droite_haut.png").convert_alpha(),
+                "NW": pygame.image.load("assets/buildings/tourelles_orientation/tourelle_gauche_haut.png").convert_alpha(),
+                "SE": pygame.image.load("assets/buildings/tourelles_orientation/tourelle_droite_bas.png").convert_alpha(),
+                "SW": pygame.image.load("assets/buildings/tourelles_orientation/tourelle_gauche_bas.png").convert_alpha(),
+            }
         }
     }
+
+    # Maintenant que images_batiments existe à 100%, on copie en toute sécurité le dictionnaire d'images
+    # pour les niveaux d'amélioration suivants :
+    images_batiments[Batiment.TYPE_TOURELLE][2] = {k: v for k, v in images_batiments[Batiment.TYPE_TOURELLE][1].items()}
+    images_batiments[Batiment.TYPE_TOURELLE][3] = {k: v for k, v in images_batiments[Batiment.TYPE_TOURELLE][1].items()}
 
     TYPES_BATIMENTS = [
         Batiment.TYPE_RESIDENTIEL,
         Batiment.TYPE_GENERATEUR,
         Batiment.TYPE_MINE,
         Batiment.TYPE_FARM,
+        Batiment.TYPE_TOURELLE,
     ]
 
     TAILLE_ICONE = 64
@@ -256,8 +274,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
                     current_playlist_index = 0
                 ambient_delay_timer = 3.0
 
-        acc_argent, acc_food, acc_vapeur = calculer_production(batiments, players[indice], dt, acc_argent, acc_food, acc_vapeur)
-
+        acc_argent, acc_food, acc_vapeur = calculer_production(batiments, players[indice], dt, acc_argent, acc_food, acc_vapeur, raid_manager=raid_manager)
         cloud_manager.update(dt)
 
         camera_x = player.pos[0] - (dims[0] / zoom) / 2

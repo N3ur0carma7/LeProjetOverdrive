@@ -1,4 +1,5 @@
 import pygame
+import core.Class.batiments as Batiment
 import math
 from screens.utils import collision, souris_vers_case, joueur_a_portee
 
@@ -22,11 +23,30 @@ def _scale_contain(img: pygame.Surface, max_w: int, max_h: int) -> pygame.Surfac
         return img
     return pygame.transform.smoothscale(img, (new_w, new_h))
 
-def _get_scaled_batiment_image(images_batiments, type_batiment, niveau, footprint_w_px, footprint_h_px, cache):
-    key = (type_batiment, niveau, footprint_w_px, footprint_h_px)
+
+def _get_scaled_batiment_image(images_batiments, type_batiment, niveau, footprint_w_px, footprint_h_px, cache,
+                               bat_obj=None):
+    from core.Class.batiments import Batiment
+
+    type_tourelle = getattr(Batiment, "TYPE_TOURELLE", "tourelle")
+
+    direction = getattr(bat_obj, "direction", "E") if type_batiment == type_tourelle else "E"
+    key = (type_batiment, niveau, footprint_w_px, footprint_h_px, direction)
     if key in cache:
         return cache[key]
-    base = images_batiments[type_batiment][niveau]
+
+    if type_batiment == type_tourelle:
+        try:
+            base = images_batiments[type_batiment][niveau][direction]
+        except (KeyError, TypeError):
+            img_dict = images_batiments[type_batiment][niveau]
+            base = img_dict if not isinstance(img_dict, dict) else (img_dict.get("S") or list(img_dict.values())[0])
+
+        footprint_w_px = int(footprint_w_px * 1.5)
+        footprint_h_px = int(footprint_h_px * 1.5)
+    else:
+        base = images_batiments[type_batiment][niveau]
+
     scaled = _scale_contain(base, footprint_w_px, footprint_h_px)
     cache[key] = scaled
     return scaled
@@ -42,7 +62,7 @@ def dessiner_monde(surface_monde, batiments, images_batiments, camera_x, camera_
         footprint_w_px = B.largeur * TAILLE_CASE
         footprint_h_px = B.hauteur * TAILLE_CASE
         image = _get_scaled_batiment_image(
-            images_batiments, B.type, B.niveau, footprint_w_px, footprint_h_px, scaled_cache
+            images_batiments, B.type, B.niveau, footprint_w_px, footprint_h_px, scaled_cache, bat_obj=B
         )
         x = B.x * TAILLE_CASE - camera_x + (footprint_w_px - image.get_width()) / 2
         y = B.y * TAILLE_CASE - camera_y + (footprint_h_px - image.get_height()) / 2
@@ -61,7 +81,7 @@ def dessiner_monde(surface_monde, batiments, images_batiments, camera_x, camera_
         footprint_w_px = test_batiment.largeur * TAILLE_CASE
         footprint_h_px = test_batiment.hauteur * TAILLE_CASE
         image = _get_scaled_batiment_image(
-            images_batiments, type_batiment, 1, footprint_w_px, footprint_h_px, scaled_cache
+            images_batiments, type_batiment, 1, footprint_w_px, footprint_h_px, scaled_cache, bat_obj=test_batiment
         )
         image_fantome = image.copy()
         if collision(batiments, test_batiment):
@@ -100,9 +120,12 @@ def dessiner_hud(ecran, dims, HAUTEUR_BARRE, rects_icones, batiment_selectionne,
         pygame.draw.rect(ecran, couleur, rect.inflate(8, 8))
 
         type_actuel = TYPES_BATIMENTS[i]
-        icone = pygame.transform.smoothscale(
-            images_batiments[type_actuel][1], (TAILLE_ICONE, TAILLE_ICONE)
-        )
+        img_base = images_batiments[type_actuel][1]
+        # Si c'est un dictionnaire (comme la tourelle avec ses directions), on prend le Sud ("S")
+        if isinstance(img_base, dict):
+            img_base = img_base.get("S") or list(img_base.values())[0]
+
+        icone = pygame.transform.smoothscale(img_base, (TAILLE_ICONE, TAILLE_ICONE))
         ecran.blit(icone, rect)
 
     # bouton toggle barre bâtiments

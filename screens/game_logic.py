@@ -3,6 +3,8 @@ import threading
 import time
 from core.Class.npc import Npc
 import multiplayer.client as client_module
+from core.Class.batiments import Batiment
+
 
 stop_event = threading.Event()
 batiments = []
@@ -107,9 +109,11 @@ def synchroniser_npcs(batiments_list, npcs, player, taille_case):
         else:
             npc.assigner_travail(None)
 
-def calculer_production(batiments_list, player, delta_time, acc_argent, acc_food, acc_vapeur):
+def calculer_production(batiments_list, player, delta_time, acc_argent, acc_food, acc_vapeur, raid_manager=None):
     food_ok = player.food > 0
     for b in batiments_list:
+        if b.type == Batiment.TYPE_TOURELLE and raid_manager is not None:
+            b.update_attaque(raid_manager.monsters, TAILLE_CASE=40)
         rtype = b.get_production_type()
         val = b.get_production() * delta_time / 60.0
         if rtype == "nourriture":

@@ -6,6 +6,7 @@ class Batiment:
     TYPE_GENERATEUR  = "generateur"
     TYPE_MINE        = "mine"
     TYPE_FARM        = "farm"
+    TYPE_TOURELLE = "tourelle"
     DATA = {
         TYPE_RESIDENTIEL: {
             1: {"population": 1, "cout": 125},
@@ -27,6 +28,11 @@ class Batiment:
             2: {"nourriture": 60,  "cout": 400},
             3: {"nourriture": 120, "cout": 800},
         },
+        TYPE_TOURELLE: {
+            1: {"degat": 30, "cout": 150},
+            2: {"degat": 60, "cout": 400},
+            3: {"degat": 120, "cout": 800},
+        },
     }
 
     # Footprint en "petites cases" (style COC) : 5x5 par défaut
@@ -39,8 +45,12 @@ class Batiment:
         self.niveau = 1
         self.x = x
         self.y = y
-        self.largeur = Batiment.DEFAULT_FOOTPRINT
-        self.hauteur = Batiment.DEFAULT_FOOTPRINT
+        if type_batiment == Batiment.TYPE_TOURELLE:
+            self.largeur = 4
+            self.hauteur = 4
+        else:
+            self.largeur = Batiment.DEFAULT_FOOTPRINT
+            self.hauteur = Batiment.DEFAULT_FOOTPRINT
 
     def get_stats(self):
         return Batiment.DATA[self.type][self.niveau]
@@ -95,6 +105,65 @@ class Batiment:
             return True
         cap = get_max_level(self.type)
         return self.niveau >= cap
+
+    def update_attaque(self, liste_ennemis, TAILLE_CASE):
+        import pygame
+        import math
+
+        if not hasattr(self, "direction"):
+            self.direction = "E"
+
+        temps_actuel = pygame.time.get_ticks()
+        stats = self.get_stats()
+        degats = stats.get("degat", 30)
+        cadence_tir = 1.0  # 1 tir par seconde
+        portee = 250
+
+        if not hasattr(self, "dernier_tir"):
+            self.dernier_tir = 0
+
+        tourelle_x = self.x * TAILLE_CASE + (self.largeur * TAILLE_CASE) // 2
+        tourelle_y = self.y * TAILLE_CASE + (self.hauteur * TAILLE_CASE) // 2
+
+        cible_proche = None
+        dist_min = portee
+
+        for ennemi in liste_ennemis:
+            if not ennemi.alive:
+                continue
+            distance = math.hypot(ennemi.x - tourelle_x, ennemi.y - tourelle_y)
+            if distance < dist_min:
+                dist_min = distance
+                cible_proche = ennemi
+
+        if cible_proche is not None:
+            dx = cible_proche.x - tourelle_x
+            dy = cible_proche.y - tourelle_y
+
+            angle = math.degrees(math.atan2(dy, dx))
+            if angle < 0:
+                angle += 360
+
+            if 22.5 <= angle < 67.5:
+                self.direction = "SE"
+            elif 67.5 <= angle < 112.5:
+                self.direction = "S"
+            elif 112.5 <= angle < 157.5:
+                self.direction = "SW"
+            elif 157.5 <= angle < 202.5:
+                self.direction = "W"
+            elif 202.5 <= angle < 247.5:
+                self.direction = "NW"
+            elif 247.5 <= angle < 292.5:
+                self.direction = "N"
+            elif 292.5 <= angle < 337.5:
+                self.direction = "NE"
+            else:
+                self.direction = "E"
+
+            if temps_actuel - self.dernier_tir >= cadence_tir * 1000:
+                cible_proche.take_damage(degats)
+                self.dernier_tir = temps_actuel
 
     def collision(self, autre):
         return not (

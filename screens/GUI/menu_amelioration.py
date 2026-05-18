@@ -74,6 +74,12 @@ def afficher_menu_amelioration(ecran, batiment, clic_x, player):
             val_actuelle = batiment.get_production()
             if not batiment.est_max_level():
                 val_suivante = Batiment.DATA[batiment.type][batiment.niveau + 1]["vapeur"]
+        elif batiment.type == Batiment.TYPE_TOURELLE:
+            info = "Degat"
+            val_actuelle = batiment.get_stats().get("degat", 30)
+            unite = ""
+            if not batiment.est_max_level():
+                val_suivante = Batiment.DATA[batiment.type][batiment.niveau + 1]["degat"]
         else:
             info = "Production"
             val_actuelle = batiment.get_production()
