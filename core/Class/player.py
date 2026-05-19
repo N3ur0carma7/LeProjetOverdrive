@@ -2,7 +2,7 @@ import math
 import pygame
 import multiplayer.client as client
 
-from LeProjetOverdrive.multiplayer.client import send_liste_joueurs_client
+
 
 # ---------------------------------------------------------------------------
 # Spritesheets player

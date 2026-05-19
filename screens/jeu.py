@@ -12,7 +12,7 @@ import random
 from screens.environment import CloudManager
 from screens.game_logic import stop_event, on_message_recu, new_player, draw_players, players
 from screens.render import corriger_transparence
-
+import screens.game_logic as gl
 from core.Class.player import Player
 from core.Class.batiments import Batiment
 from core.Class.npc import Npc
@@ -32,8 +32,8 @@ from screens.floating_messages import FloatingMessageManager
 surface_monde, camera_x, camera_y = None, None, None
 TAILLE_CASE = None
 def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False):
-    global batiments, indice
-    global players, TAILLE_CASE
+    global batiments
+    global TAILLE_CASE
     global surface_monde, camera_x, camera_y, dt
     HAUTEUR_BARRE = 100
     LARGEUR_ECRAN, HAUTEUR_ECRAN = ecran.get_size()
@@ -45,9 +45,6 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
     def _pos_centre_case(cx: int, cy: int):
         return ((cx + 0.5) * TAILLE_CASE, (cy + 0.5) * TAILLE_CASE)
 
-    # S'assurer qu'un joueur existe avant tout accès à players[indice]
-    if not players:
-        indice = 0
 
     images_batiments = {
         Batiment.TYPE_RESIDENTIEL: {
@@ -105,7 +102,8 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
         update = threading.Thread(target=on_message_recu, args=(TAILLE_CASE,), daemon=True)
         update.start()
         time.sleep(1)
-
+    indice = gl.indice
+    players = gl.players
     image_pnj = pygame.image.load("assets/pnj.png").convert_alpha()
     font_argent = pygame.font.Font("assets/fonts/Minecraft.ttf", 15)
     hud_or_img     = pygame.image.load("assets/or.png").convert_alpha()
@@ -122,12 +120,6 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
 
     is_new_game = not os.path.exists("save/save.json")
     if not dev_mode and os.path.exists("save/save.json"):
-        if not players or indice < 0 or indice >= len(players):
-            Player.load_sprites()
-            p = Player()
-            p.pos = _pos_centre_case(5, 5)
-            players[:] = [p]
-            indice = 0
         if not load_save(batiments, players[indice]):
             print("ERREUR CRITIQUE: Lecture du fichier save/save.json")
             return False
@@ -141,10 +133,10 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
         players[indice].money = 5000
         players[indice].food = 5000
         players[indice].vapeur = 5000
-
+    print(players)
     player = players[indice]
 
-    synchroniser_npcs(batiments, npcs, players[indice], TAILLE_CASE)
+    synchroniser_npcs(batiments, npcs, player, TAILLE_CASE)
 
     # Camera et zoom
     camera_x = player.pos[0] - dims[0] / 2
