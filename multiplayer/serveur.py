@@ -76,9 +76,10 @@ def handle_client(client, addr):
                 data = json.dumps({"type": "liste_batiments", "payload": payload})
                 send_client(data, clients[sujet2])
     if jeu.TAILLE_CASE is not None:
-        player = Player()
-        player.pos = (jeu.TAILLE_CASE / 2, jeu.TAILLE_CASE / 2)
-        jeu.players.append(player)
+        Player.load_sprites()
+        p = Player()
+        p.pos = ((5 + 0.5) * jeu.TAILLE_CASE, (5 + 0.5) * jeu.TAILLE_CASE)
+        jeu.players.append(p)
     for sujet in clients.keys():
         payload = [p.to_dict() for p in jeu.players]
         payload[0]["pos"] = list(payload[0]["pos"])

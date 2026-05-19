@@ -1,5 +1,8 @@
 import math
 import pygame
+import multiplayer.client as client
+
+from LeProjetOverdrive.multiplayer.client import send_liste_joueurs_client
 
 # ---------------------------------------------------------------------------
 # Spritesheets player
@@ -178,7 +181,7 @@ class Player:
         self.pos = (self.pos[0] + dx * step, self.pos[1] + dy * step)
 
     # ------------------------------------------------------------------
-    def update_anim(self, dt):
+    def update_anim(self, dt, players):
         if self._attack_anim_active:
             self._attack_anim_timer -= dt
             if self._attack_anim_timer <= 0:
@@ -189,6 +192,13 @@ class Player:
             else:
                 self._advance_frame("hand_cannon", dt)
             return
+        if players is not None:
+            try:
+                if client.CLIENT is not None:
+                    client.send_liste_joueurs_client(players, client.CLIENT)
+            except:
+                pass
+
 
         self.anim_state = "run" if self.is_moving else "idle"
         self._advance_frame(self.anim_state, dt)

@@ -47,10 +47,6 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
 
     # S'assurer qu'un joueur existe avant tout accès à players[indice]
     if not players:
-        Player.load_sprites()
-        p = Player()
-        p.pos = _pos_centre_case(5, 5)
-        players.append(p)
         indice = 0
 
     images_batiments = {
@@ -245,10 +241,6 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
 
         # Si l'indice joueur change (online) ou si la liste joueurs est mise à jour
         if not players:
-            Player.load_sprites()
-            p = Player()
-            p.pos = _pos_centre_case(5, 5)
-            players.append(p)
             indice = 0
         elif indice < 0 or indice >= len(players):
             indice = max(0, min(indice, len(players) - 1))
@@ -499,7 +491,7 @@ def boucle_jeu(ecran, horloge, FPS, online: bool = False, dev_mode: bool = False
 
 
         player.update(TAILLE_CASE, dt)
-        player.update_anim(dt)
+        player.update_anim(dt, players)
 
         # mort
         if player.hp <= 0:
